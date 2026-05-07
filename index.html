@@ -499,7 +499,7 @@
   }
   .target {
     display: grid;
-    grid-template-columns: 24px 1fr 200px auto;
+    grid-template-columns: 24px 1fr auto;
     gap: 14px;
     align-items: center;
     padding: 14px 16px;
@@ -935,44 +935,6 @@
     text-align: center;
   }
 
-  /* ============ FILE PROTOCOL WARNING ============ */
-  .file-warning {
-    display: none;
-    background: rgba(232, 157, 60, 0.08);
-    border-bottom: 1px solid var(--amber);
-    padding: 12px 0;
-  }
-  .file-warning.show { display: block; }
-  .file-warning .row {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    font-family: var(--mono);
-    font-size: 11px;
-    letter-spacing: 0.04em;
-    color: var(--amber);
-  }
-  .file-warning .marker {
-    width: 8px;
-    height: 8px;
-    background: var(--amber);
-    border-radius: 50%;
-    flex-shrink: 0;
-  }
-  .file-warning .label {
-    font-weight: 600;
-    text-transform: uppercase;
-    letter-spacing: 0.14em;
-    font-size: 10px;
-  }
-  .file-warning .body { color: var(--ink-soft); }
-  .file-warning code {
-    background: var(--bg-card);
-    padding: 1px 6px;
-    border: 0.5px solid var(--line-bright);
-    color: var(--ink);
-  }
-
   /* ============ FOOTER ============ */
   footer.site {
     background: var(--bg-elev);
@@ -1077,25 +1039,12 @@
   .e-hint .label { color: var(--teal); margin-right: 6px; }
 
   /* ============ MOBILE ============ */
-  @media (max-width: 1100px) {
-    .target { grid-template-columns: 24px 1fr 160px auto; }
-  }
   @media (max-width: 900px) {
     .wrap { padding: 0 20px; }
     h1.title { font-size: 36px; }
     .layout { grid-template-columns: 1fr; gap: 24px; }
     aside.session { position: static; max-height: none; }
     .log-list { max-height: 240px; }
-    .target {
-      grid-template-columns: 24px 1fr auto;
-      grid-template-areas:
-        "check main fire"
-        "check disc disc";
-    }
-    .target-check { grid-area: check; align-self: start; padding-top: 4px; }
-    .target-main { grid-area: main; }
-    .target-discovery { grid-area: disc; padding-top: 8px; border-top: 0.5px dashed var(--line); margin-top: 6px; }
-    .target-fire { grid-area: fire; align-self: start; }
     .diag-grid { grid-template-columns: 1fr 1fr; }
     .diag-cell { border-right: none; border-bottom: 0.5px solid var(--line); }
     .diag-cell:nth-child(odd) { border-right: 0.5px solid var(--line); }
@@ -1217,26 +1166,17 @@
   <div class="wrap row">
     <span class="sys-id">[ S&S / OPS ]</span>
     <span class="breadcrumb">HUB / TOOLS / ARCHIVE TRAIL</span>
-    <span class="pulse"><span class="dot" aria-hidden="true"></span>SIG-ARC-001 · v0.1.2</span>
+    <span class="pulse"><span class="dot" aria-hidden="true"></span>SIG-ARC-001 · v0.2</span>
     <span>VERSOIX</span>
   </div>
 </section>
-
-<!-- file:// origin warning (only shown when running locally) -->
-<div class="file-warning" id="file-warning">
-  <div class="wrap row">
-    <span class="marker" aria-hidden="true"></span>
-    <span class="label">Local file mode</span>
-    <span class="body">Federated discovery (Memento, Wayback CDX) is blocked by the browser when running from a <code>file://</code> URL. Capture counts will not populate. Open via a local server (<code>python3 -m http.server</code>) or once deployed to GitHub Pages.</span>
-  </div>
-</div>
 
 <!-- Masthead -->
 <section class="masthead">
   <div class="wrap inner">
     <div class="eyebrow">SIG-ARC-001 · ARCHIVE TRAIL</div>
-    <h1 class="title">See where it was.<br>Before you <em>click.</em></h1>
-    <p class="lede">Paste a URL. Archive Trail queries Memento and Wayback in the background and tells you which archives have a snapshot, when, and how many. Every pivot logged. Every snapshot timestamped. Citation-ready.</p>
+    <h1 class="title">Thirty-one archives.<br>One <em>pivot.</em></h1>
+    <p class="lede">Paste a URL or handle. Archive Trail groups 31 archives by intent (recover, compare, regional), pins jurisdiction-specific archives to the top, and logs every pivot with a session ID for your case file. Citation-ready exports.</p>
 
     <div class="input-block">
       <label for="target-input" class="input-label">Target URL</label>
@@ -1254,16 +1194,16 @@
           <span class="value muted" id="diag-entity"><span class="check">Awaiting input</span></span>
         </div>
         <div class="diag-cell">
-          <span class="label">Live status</span>
-          <span class="value muted" id="diag-live"><span class="check">—</span></span>
+          <span class="label">Compatible archives</span>
+          <span class="value muted" id="diag-compat">—</span>
+        </div>
+        <div class="diag-cell">
+          <span class="label">Pinned by region</span>
+          <span class="value muted" id="diag-pinned">—</span>
         </div>
         <div class="diag-cell">
           <span class="label">SHA-256 (URL)</span>
           <span class="value muted" id="diag-hash">—</span>
-        </div>
-        <div class="diag-cell">
-          <span class="label">Federated discovery</span>
-          <span class="value muted" id="diag-memento"><span class="check">—</span></span>
         </div>
       </div>
     </div>
@@ -1277,11 +1217,9 @@
       <span><span class="num" id="selected-count">0</span> selected</span>
       <span class="sep" aria-hidden="true">·</span>
       <span><span class="num" id="fired-count">0</span> fired</span>
-      <span class="sep" aria-hidden="true">·</span>
-      <span><span class="num" id="found-count">0</span> with confirmed snapshots</span>
     </div>
     <div class="action-buttons">
-      <button class="btn-ghost" onclick="selectFound()" id="btn-found" disabled>Select confirmed</button>
+      <button class="btn-ghost" onclick="selectPinned()" id="btn-pinned" disabled>Select pinned</button>
       <button class="btn-ghost" onclick="selectAll()" id="btn-all" disabled>Select all compatible</button>
       <button class="btn-ghost" onclick="copyURLs()" id="btn-copy" disabled>Copy URLs</button>
       <button class="btn-primary" onclick="openBatch()" id="btn-batch" disabled>Open batch →</button>
@@ -1294,8 +1232,8 @@
 
   <main id="main">
     <div id="empty-state" class="empty-prompt">
-      <div class="e-title">Paste a URL to begin discovery.</div>
-      <div class="e-desc">Memento and Wayback CDX are queried in the background. Verified rows show snapshot counts and date ranges before you fire anything.</div>
+      <div class="e-title">Paste a URL to begin.</div>
+      <div class="e-desc">Archive Trail groups thirty-one archives by intent and pins jurisdiction-specific archives to the top of each group. Try one of these to see how it works.</div>
       <div class="e-hints">
         <button class="e-hint" data-hint="https://www.bbc.co.uk/news">
           <span class="label">URL · UK</span>BBC News
@@ -1342,7 +1280,7 @@
         <span class="count" id="log-count">0 entries</span>
       </div>
       <div class="log-list" id="log-list" aria-live="polite" aria-relevant="additions">
-        <div class="log-empty">No pivots fired yet.<br>Snapshots will record their<br>Memento-Datetime here.</div>
+        <div class="log-empty">No pivots fired yet.<br>Every pivot will be<br>timestamped and logged here.</div>
       </div>
       <div class="session-actions">
         <button class="btn-mini" onclick="exportCSV()" id="btn-csv" disabled>Export CSV</button>
@@ -1355,7 +1293,7 @@
     <div class="citation-card">
       <div class="citation-label">Citation note</div>
       <div class="citation-body" id="citation-body">
-        <span class="key">tool:</span> <span class="val">SIG-ARC-001 v0.1.2</span><br>
+        <span class="key">tool:</span> <span class="val">SIG-ARC-001 v0.2</span><br>
         <span class="key">session:</span> <span class="val" id="cit-session">awaiting</span><br>
         <span class="key">started:</span> <span class="val" id="cit-started">awaiting</span><br>
         <span class="key">target:</span> <span class="val" id="cit-target">—</span><br>
@@ -1380,18 +1318,17 @@
 <!-- Print-only block (only renders for Cmd/Ctrl+P) -->
 <section class="print-only" id="print-block">
   <h2>Archive Trail · Investigation report</h2>
-  <div class="meta-row"><span class="k">Tool</span><span>SIG-ARC-001 v0.1.2</span></div>
+  <div class="meta-row"><span class="k">Tool</span><span>SIG-ARC-001 v0.2</span></div>
   <div class="meta-row"><span class="k">Session</span><span id="print-session">—</span></div>
   <div class="meta-row"><span class="k">Started</span><span id="print-started">—</span></div>
   <div class="meta-row"><span class="k">Target URL (raw)</span><span id="print-target-raw">—</span></div>
   <div class="meta-row"><span class="k">Target URL (normalised)</span><span id="print-target">—</span></div>
   <div class="meta-row"><span class="k">SHA-256 (URL)</span><span id="print-hash">—</span></div>
-  <div class="meta-row"><span class="k">Live status</span><span id="print-live">—</span></div>
   <div class="meta-row"><span class="k">Pivots fired</span><span id="print-pivots">0</span></div>
   <div class="meta-row"><span class="k">Standard</span><span>LST-001 v1.0.3 · SIG-STD-002 v2.0</span></div>
   <table id="print-log-table" style="display: none;">
     <thead>
-      <tr><th>UTC</th><th>Action</th><th>Archive</th><th>Memento-Datetime</th><th>URL</th></tr>
+      <tr><th>UTC</th><th>Action</th><th>Archive</th><th>URL</th></tr>
     </thead>
     <tbody id="print-log-rows"></tbody>
   </table>
@@ -1402,7 +1339,7 @@
   <div class="wrap row">
     <span class="accent">[ S&S / OPS ]</span>
     <span class="sep">·</span>
-    <span>SIG-ARC-001 v0.1.2</span>
+    <span>SIG-ARC-001 v0.2</span>
     <span class="sep">·</span>
     <span>LST-001 v1.0.3</span>
     <span class="sep">·</span>
@@ -1605,15 +1542,10 @@
   let normalisedInput = '';
   let currentEntity = null;
   let currentHash = null;
-  let liveStatus = null;
-  let mementoCounts = {};       // archiveKey -> { count, first, last }
-  let waybackDetail = null;     // { count, first, last, lastStatus, capped }
   let selected = new Set();
   let log = [];
   let firedTargets = new Map();
   let inputDebounce = null;
-  let verifyAbort = null;
-  const cache = {};             // normalisedURL -> { live, memento, wayback, ts }
   let kbFocusIdx = -1;          // keyboard-focused row index
   let renderedRows = [];        // ordered list of compatible-row ids for kb nav
 
@@ -1696,150 +1628,12 @@
     }
   }
 
-  // ---------- LIVE STATUS ----------
-  // Removed direct HEAD check. Cross-origin HEAD almost always fails CORS, so the
-  // result was always "Unknown" and the failed request cluttered the network log.
-  // Instead we derive live status from Wayback CDX's last-capture status code,
-  // which is more reliable and we already fetch it.
-  async function checkLive(url, signal) {
-    return { code: null, ok: null, label: 'Pending CDX' };
-  }
-
-  // ---------- MEMENTO FEDERATED ----------
-  // Defensively parse three response shapes the aggregator returns. The shape
-  // varies depending on whether the URL has any captures and which archives
-  // returned data within the timeout window.
-  async function checkMemento(url, signal) {
-    const timeoutCtl = new AbortController();
-    const timeoutId = setTimeout(() => timeoutCtl.abort(), 12000);
-    const combined = anySignal([signal, timeoutCtl.signal]);
-    try {
-      const apiUrl = 'https://timetravel.mementoweb.org/api/json/19950101000000/' + encodeURIComponent(url);
-      const r = await fetch(apiUrl, { signal: combined });
-      if (!r.ok) return { ok: false, error: `Memento returned ${r.status}`, counts: {} };
-      const j = await r.json();
-      const counts = {};
-
-      const recordHit = (mementoUri, datetime) => {
-        if (!mementoUri || !datetime) return;
-        let host;
-        try { host = new URL(mementoUri).hostname; } catch { return; }
-        const matchingTarget = TARGETS.find(t => t.memento && (host === t.memento || host.endsWith('.' + t.memento) || host.endsWith(t.memento)));
-        if (!matchingTarget) return;
-        const key = matchingTarget.memento;
-        if (!counts[key]) counts[key] = { count: 0, first: datetime, last: datetime };
-        counts[key].count++;
-        if (datetime < counts[key].first) counts[key].first = datetime;
-        if (datetime > counts[key].last) counts[key].last = datetime;
-      };
-
-      // Shape 1: { mementos: { list: [{ datetime, uri }, ...] } }
-      if (j.mementos && Array.isArray(j.mementos.list)) {
-        for (const m of j.mementos.list) recordHit(m.uri, m.datetime);
-      }
-      // Shape 2: { mementos: { first, last, closest, prev, next } } (single-archive response)
-      if (j.mementos && !Array.isArray(j.mementos.list) && typeof j.mementos === 'object') {
-        for (const k of ['first', 'last', 'closest', 'prev', 'next']) {
-          const m = j.mementos[k];
-          if (m && m.uri) recordHit(m.uri, m.datetime);
-        }
-      }
-      // Shape 3: { timemap_index: [...] } (rare, points to per-archive timemaps)
-      if (Array.isArray(j.timemap_index)) {
-        for (const tm of j.timemap_index) {
-          if (tm && tm.uri) {
-            try {
-              const host = new URL(tm.uri).hostname;
-              const matchingTarget = TARGETS.find(t => t.memento && (host === t.memento || host.endsWith('.' + t.memento)));
-              if (matchingTarget && !counts[matchingTarget.memento]) {
-                // Mark presence even without count detail
-                counts[matchingTarget.memento] = { count: 1, first: null, last: null, presenceOnly: true };
-              }
-            } catch {}
-          }
-        }
-      }
-      return { ok: true, counts };
-    } catch (e) {
-      if (e.name === 'AbortError' && signal && signal.aborted) throw e;
-      return { ok: false, error: e.name === 'AbortError' ? 'Timed out' : 'Network error', counts: {} };
-    } finally {
-      clearTimeout(timeoutId);
-    }
-  }
-
-  // ---------- WAYBACK AVAILABILITY (fast pre-check) ----------
-  // Sub-second presence check. Returns { available: bool, closest: { timestamp, status, url } }
-  // We use this to populate "snapshots present" quickly so the user gets feedback
-  // even when the full CDX count is slow.
-  async function checkWaybackAvailability(url, signal) {
-    const timeoutCtl = new AbortController();
-    const timeoutId = setTimeout(() => timeoutCtl.abort(), 6000);
-    const combined = anySignal([signal, timeoutCtl.signal]);
-    try {
-      const api = `https://archive.org/wayback/available?url=${encodeURIComponent(url)}`;
-      const r = await fetch(api, { signal: combined });
-      if (!r.ok) return { ok: false, error: `Availability ${r.status}` };
-      const j = await r.json();
-      const closest = j && j.archived_snapshots && j.archived_snapshots.closest;
-      if (closest && closest.available) {
-        return {
-          ok: true,
-          available: true,
-          timestamp: closest.timestamp || null,
-          status: closest.status || null
-        };
-      }
-      return { ok: true, available: false };
-    } catch (e) {
-      if (e.name === 'AbortError' && signal && signal.aborted) throw e;
-      return { ok: false, error: e.name === 'AbortError' ? 'Timed out' : 'Network error' };
-    } finally {
-      clearTimeout(timeoutId);
-    }
-  }
-
-  // ---------- WAYBACK CDX (with paging awareness, 25s timeout) ----------
-  // CDX caps at 10,000 rows by default. We request 10,001 to detect overflow.
-  // Distinct return shapes for: success, timeout, server error, network error.
-  // The caller can show appropriate UI for each.
-  async function checkWaybackCDX(url, signal) {
-    const timeoutCtl = new AbortController();
-    const timeoutId = setTimeout(() => timeoutCtl.abort(), 25000);
-    const combined = anySignal([signal, timeoutCtl.signal]);
-    const LIMIT = 10001;
-    try {
-      const cdx = `https://web.archive.org/cdx/search/cdx?url=${encodeURIComponent(url)}&output=json&limit=${LIMIT}&fl=timestamp,statuscode`;
-      const r = await fetch(cdx, { signal: combined });
-      if (!r.ok) return { ok: false, error: `CDX returned ${r.status}`, errorKind: 'server' };
-      const j = await r.json();
-      if (!Array.isArray(j) || j.length < 2) return { ok: true, count: 0, first: null, last: null, lastStatus: null, capped: false };
-      const rows = j.slice(1);
-      const capped = rows.length >= LIMIT;
-      const reportedCount = capped ? LIMIT - 1 : rows.length;
-      const timestamps = rows.map(row => row[0]).filter(Boolean).sort();
-      const lastRow = rows[rows.length - 1];
-      const lastStatus = lastRow ? lastRow[1] : null;
-      return {
-        ok: true,
-        count: reportedCount,
-        first: timestamps[0] || null,
-        last: timestamps[timestamps.length - 1] || null,
-        lastStatus: lastStatus,
-        capped
-      };
-    } catch (e) {
-      if (e.name === 'AbortError' && signal && signal.aborted) throw e;
-      const isTimeout = e.name === 'AbortError';
-      return {
-        ok: false,
-        error: isTimeout ? 'Timed out (25s)' : 'Network error',
-        errorKind: isTimeout ? 'timeout' : 'network'
-      };
-    } finally {
-      clearTimeout(timeoutId);
-    }
-  }
+  // ---------- NO NETWORK CALLS ----------
+  // v0.2 ships as a launchpad, not a verifier. Federated discovery via Memento
+  // and Wayback CDX is deferred to v0.3 once we have a Cloudflare Worker on
+  // api.signalandshadow.io to bypass IA's inconsistent CORS posture.
+  // The functions previously here (checkLive, checkMemento, checkWaybackAvailability,
+  // checkWaybackCDX) have been removed. The UI works entirely from local state.
 
   // ---------- UTILITIES ----------
   // Polyfill-ish: combine multiple AbortSignals into one
@@ -1977,7 +1771,6 @@
       tagHtml += `<span class="target-tag ${cls}">${escapeHTML(t.tag.label)}</span>`;
     }
 
-    const discoveryHtml = renderDiscovery(t);
     const ariaLabel = `${t.name}, ${t.compatible ? 'compatible' : 'not applicable for this entity type'}${t.pinned ? ', pinned for region' : ''}`;
 
     return `
@@ -1993,7 +1786,6 @@
           </div>
           <div class="target-note">${escapeHTML(t.note)}</div>
         </div>
-        <div class="target-discovery" aria-label="Discovery status">${discoveryHtml}</div>
         <button class="target-fire ${fired ? 'fired' : ''}" data-id="${t.id}" ${!t.compatible ? 'disabled' : ''} aria-label="${fired ? 'Re-open' : 'Open'} ${escapeHTML(t.name)} in new tab">
           ${fired ? 'Fired ↗' : 'Open ↗'}
         </button>
@@ -2001,70 +1793,7 @@
     `;
   }
 
-  function renderDiscovery(t) {
-    if (!t.compatible) {
-      return `<div class="discovery-line none"><span class="marker" aria-hidden="true">—</span><span class="sr-only">Not applicable. </span>Not applicable</div>`;
-    }
-    // Wayback gets richer detail from CDX
-    if (t.id === 'archive-org') {
-      if (waybackDetail === null) {
-        return `<div class="discovery-line checking"><span class="marker" aria-hidden="true"><span class="spinner"></span></span><span class="sr-only">Checking. </span>Checking…</div>`;
-      }
-      // Hard failure (Availability and CDX both failed)
-      if (waybackDetail.ok === false) {
-        const errKind = waybackDetail.errorKind === 'timeout' ? 'Timed out' : 'Check failed';
-        return `<div class="discovery-line error"><span class="marker" aria-hidden="true">!</span><span class="sr-only">Error. </span>${escapeHTML(errKind)}</div><div class="discovery-detail">${escapeHTML(waybackDetail.error || '')}</div>`;
-      }
-      // Confirmed present, count still pending (Availability succeeded, CDX still loading)
-      if (waybackDetail.pending) {
-        const yearBit = waybackDetail.first ? formatYear(waybackDetail.first) + ' or earlier' : '';
-        return `
-          <div class="discovery-line ok"><span class="marker" aria-hidden="true">✓</span><span class="sr-only">Found. </span>Snapshots present</div>
-          <div class="discovery-detail"><span class="spinner"></span> Counting…${yearBit ? ' · ' + yearBit : ''}</div>
-        `;
-      }
-      // Confirmed present, count failed (Availability succeeded, CDX errored or timed out)
-      if (waybackDetail.countFailed) {
-        const yearBit = waybackDetail.first ? formatYear(waybackDetail.first) : '';
-        const failLabel = waybackDetail.countFailed === 'timeout' ? 'count timed out' : 'count unavailable';
-        return `
-          <div class="discovery-line ok"><span class="marker" aria-hidden="true">✓</span><span class="sr-only">Found. </span>Snapshots present</div>
-          <div class="discovery-detail">${yearBit ? yearBit + ' · ' : ''}${failLabel}</div>
-        `;
-      }
-      // Full result
-      if (waybackDetail.count > 0) {
-        const liveBit = waybackDetail.lastStatus
-          ? ` · last capture ${waybackDetail.lastStatus}`
-          : '';
-        return `
-          <div class="discovery-line ok"><span class="marker" aria-hidden="true">✓</span><span class="sr-only">Found. </span><span class="discovery-count">${formatCountDisplay(waybackDetail.count, waybackDetail.capped)}</span> captures</div>
-          <div class="discovery-detail">${formatYearRange(waybackDetail.first, waybackDetail.last)}${liveBit}</div>
-        `;
-      }
-      return `<div class="discovery-line none"><span class="marker" aria-hidden="true">○</span><span class="sr-only">No snapshots. </span>No captures</div>`;
-    }
-    // Memento-covered archives
-    if (t.memento) {
-      if (mementoCounts === null) {
-        return `<div class="discovery-line checking"><span class="marker" aria-hidden="true"><span class="spinner"></span></span><span class="sr-only">Checking. </span>Checking…</div>`;
-      }
-      const m = mementoCounts[t.memento];
-      if (m && m.count > 0) {
-        if (m.presenceOnly) {
-          return `<div class="discovery-line ok"><span class="marker" aria-hidden="true">✓</span><span class="sr-only">Found. </span>Snapshots present</div><div class="discovery-detail">Count not reported</div>`;
-        }
-        const range = formatYearRange(m.first, m.last);
-        return `
-          <div class="discovery-line ok"><span class="marker" aria-hidden="true">✓</span><span class="sr-only">Found. </span><span class="discovery-count">${m.count.toLocaleString()}</span> ${m.count === 1 ? 'capture' : 'captures'}</div>
-          ${range ? `<div class="discovery-detail">${range}</div>` : ''}
-        `;
-      }
-      return `<div class="discovery-line none"><span class="marker" aria-hidden="true">○</span><span class="sr-only">No snapshots. </span>No snapshots found</div>`;
-    }
-    // Manual-check rows
-    return `<div class="discovery-line manual"><span class="marker" aria-hidden="true">●</span><span class="sr-only">Manual check required. </span>Manual check</div><div class="discovery-detail">No federated API</div>`;
-  }
+  // renderDiscovery removed in v0.2 — no verification means no discovery column.
 
   function applyKbFocus() {
     document.querySelectorAll('.target.kb-focus').forEach(el => el.classList.remove('kb-focus'));
@@ -2078,24 +1807,23 @@
   }
 
   function updateActionBar() {
-    const found = countConfirmedSnapshots();
+    const pinnedCount = countPinned();
     document.getElementById('selected-count').textContent = selected.size;
     document.getElementById('fired-count').textContent = log.filter(e => e.action === 'fire').length;
-    document.getElementById('found-count').textContent = found;
     document.getElementById('btn-batch').disabled = selected.size === 0;
     document.getElementById('btn-copy').disabled = selected.size === 0;
-    document.getElementById('btn-found').disabled = found === 0;
+    document.getElementById('btn-pinned').disabled = pinnedCount === 0;
     document.getElementById('btn-all').disabled = !currentEntity || !currentEntity.type;
   }
 
-  function countConfirmedSnapshots() {
+  // Replaced countConfirmedSnapshots with countPinned (no verification in v0.2).
+  function countPinned() {
     if (!currentEntity || !currentEntity.type) return 0;
+    const cyrillic = isCyrillic(rawInput);
     let n = 0;
     for (const t of TARGETS) {
       if (!t.accepts.includes(currentEntity.type)) continue;
-      if (t.id === 'archive-org' && waybackDetail && waybackDetail.ok &&
-          (waybackDetail.count > 0 || waybackDetail.pending || waybackDetail.countFailed)) n++;
-      else if (t.memento && mementoCounts && mementoCounts[t.memento] && mementoCounts[t.memento].count > 0) n++;
+      if (isPinned(t, currentEntity) || (cyrillic && t.cyrillicPin)) n++;
     }
     return n;
   }
@@ -2129,12 +1857,11 @@
       const time = new Date(e.timestamp).toISOString().slice(11, 19);
       const tgtLabel = t ? t.name : e.target;
       const inputShort = e.input.length > 28 ? e.input.slice(0, 26) + '…' : e.input;
-      const memento = e.mementoDatetime ? `<br><span class="memento">memento ${escapeHTML(e.mementoDatetime)}</span>` : '';
-      const tooltip = `${e.timestamp} · ${tgtLabel} · ${e.input}${e.mementoDatetime ? ' · ' + e.mementoDatetime : ''}`;
+      const tooltip = `${e.timestamp} · ${tgtLabel} · ${e.input}`;
       return `
         <div class="log-entry" title="${escapeHTML(tooltip)}">
           <span class="when">${time}</span>
-          <span class="what"><span class="name">${escapeHTML(tgtLabel)}</span><br><span class="tgt">${escapeHTML(inputShort)}</span>${memento}</span>
+          <span class="what"><span class="name">${escapeHTML(tgtLabel)}</span><br><span class="tgt">${escapeHTML(inputShort)}</span></span>
         </div>
       `;
     }).join('');
@@ -2150,9 +1877,9 @@
   function updateDiagnostics() {
     if (!currentEntity || !currentEntity.type) {
       setDiag('diag-entity', '<span class="check">Awaiting input</span>', 'muted');
-      setDiag('diag-live', '<span class="check">—</span>', 'muted');
+      setDiag('diag-compat', '—', 'muted');
+      setDiag('diag-pinned', '—', 'muted');
       setDiag('diag-hash', '—', 'muted');
-      setDiag('diag-memento', '<span class="check">—</span>', 'muted');
       document.getElementById('normalised-row').classList.remove('show');
       return;
     }
@@ -2172,54 +1899,21 @@
   }
 
   function paintDiagnostics() {
-    // Live status: prefer CDX last-capture status (more reliable than blocked HEAD)
-    if (waybackDetail && waybackDetail.ok && waybackDetail.lastStatus) {
-      const code = parseInt(waybackDetail.lastStatus, 10);
-      let cls = 'muted', label = `Last Wayback: ${waybackDetail.lastStatus}`;
-      if (code >= 200 && code < 300) { cls = 'ok'; label = `Live (last capture ${waybackDetail.lastStatus})`; }
-      else if (code === 404 || code === 410) { cls = 'err'; label = `Likely dead (Wayback ${waybackDetail.lastStatus})`; }
-      else if (code >= 300 && code < 400) { cls = 'warn'; label = `Redirected (Wayback ${waybackDetail.lastStatus})`; }
-      setDiag('diag-live', `<span class="check">${escapeHTML(label)}</span>`, cls);
-    } else if (waybackDetail && waybackDetail.ok === false) {
-      setDiag('diag-live', `<span class="check">Unknown (CDX failed)</span>`, 'muted');
-    } else if (waybackDetail && waybackDetail.pending) {
-      setDiag('diag-live', `<span class="check">Pending CDX…</span>`, 'muted');
+    // v0.2: paint compat count and pinned count, both derived from local state.
+    if (!currentEntity || !currentEntity.type) {
+      setDiag('diag-compat', '—', 'muted');
+      setDiag('diag-pinned', '—', 'muted');
+      return;
     }
-
-    if (mementoCounts === null) return; // still checking
-
-    const mementoArchives = Object.values(mementoCounts || {}).filter(v => v && v.count > 0).length;
-    const mementoTotal = Object.values(mementoCounts || {}).reduce((s, v) => s + (v.count || 0), 0);
-
-    let waybackArchiveCount = 0;
-    let waybackCaptureCount = 0;
-    let waybackPendingNote = '';
-
-    if (waybackDetail && waybackDetail.ok) {
-      if (waybackDetail.count > 0) {
-        waybackArchiveCount = 1;
-        waybackCaptureCount = waybackDetail.count;
-      } else if (waybackDetail.pending || waybackDetail.countFailed) {
-        // Snapshots known to exist, but exact count unavailable
-        waybackArchiveCount = 1;
-        waybackPendingNote = waybackDetail.countFailed
-          ? ' (Wayback count unavailable)'
-          : ' (Wayback count pending)';
-      }
+    const cyrillic = isCyrillic(rawInput);
+    let compat = 0, pinned = 0;
+    for (const t of TARGETS) {
+      if (!t.accepts.includes(currentEntity.type)) continue;
+      compat++;
+      if (isPinned(t, currentEntity) || (cyrillic && t.cyrillicPin)) pinned++;
     }
-
-    const totalArchives = mementoArchives + waybackArchiveCount;
-    const totalCaptures = mementoTotal + waybackCaptureCount;
-
-    if (totalArchives > 0) {
-      const cappedNote = waybackDetail && waybackDetail.capped ? ' (Wayback capped at 10,000)' : waybackPendingNote;
-      const captureLabel = totalCaptures > 0 ? ` · ${totalCaptures.toLocaleString()} captures` : '';
-      setDiag('diag-memento', `<span class="check">${totalArchives} ${totalArchives === 1 ? 'archive' : 'archives'}${captureLabel}${cappedNote}</span>`, 'ok');
-    } else if (waybackDetail && waybackDetail.ok === false) {
-      setDiag('diag-memento', `<span class="check">Wayback ${waybackDetail.errorKind === 'timeout' ? 'timed out' : 'failed'}, no other archives</span>`, 'warn');
-    } else {
-      setDiag('diag-memento', `<span class="check">No snapshots found</span>`, 'warn');
-    }
+    setDiag('diag-compat', `${compat} of ${TARGETS.length}`, compat > 0 ? 'ok' : 'muted');
+    setDiag('diag-pinned', pinned > 0 ? `${pinned}` : 'None', pinned > 0 ? 'ok' : 'muted');
   }
 
   // ---------- INPUT HANDLING ----------
@@ -2230,20 +1924,17 @@
     currentEntity = detectEntity(rawInput, normalisedInput);
 
     selected.clear();
-    waybackDetail = null;
-    mementoCounts = {};
-    liveStatus = null;
     currentHash = null;
     kbFocusIdx = -1;
 
     updateDiagnostics();
     renderTargets();
     updateActionBar();
+    paintDiagnostics();
 
     document.getElementById('cit-target').textContent = normalisedInput || rawInput || '—';
     document.getElementById('cit-hash').textContent = '—';
 
-    if (verifyAbort) verifyAbort.abort();
     if (inputDebounce) clearTimeout(inputDebounce);
 
     if (!currentEntity.type || currentEntity.type === 'keyword') return;
@@ -2256,151 +1947,13 @@
     const entity = currentEntity;
     if (!entity || !entity.type) return;
 
-    // Hash always (cheap, local)
+    // v0.2: only the SHA-256 hash needs to run. No network calls.
     sha256(entity.normalised).then(h => {
       if (rawInput !== inputAtStart || !h) return;
       currentHash = h;
       setDiag('diag-hash', h.slice(0, 16) + '…', 'ok');
       document.getElementById('cit-hash').textContent = h.slice(0, 24) + '…';
     });
-
-    // Cache hit?
-    const cacheKey = entity.normalised;
-    if (cache[cacheKey]) {
-      const c = cache[cacheKey];
-      liveStatus = c.live;
-      mementoCounts = c.memento;
-      waybackDetail = c.wayback;
-      paintDiagnostics();
-      renderTargets();
-      updateActionBar();
-      return;
-    }
-
-    // For keyword/handle, skip URL-only checks
-    if (entity.type === 'keyword') {
-      setDiag('diag-live', '<span class="check">Not applicable</span>', 'muted');
-      setDiag('diag-memento', '<span class="check">Not applicable</span>', 'muted');
-      mementoCounts = {};
-      renderTargets();
-      return;
-    }
-
-    // For handles, run Wayback CDX against the constructed twitter URL only
-    if (entity.type === 'handle') {
-      setDiag('diag-live', '<span class="check">Not applicable</span>', 'muted');
-      const handle = entity.normalised.replace(/^@/, '');
-      const handleURL = `https://twitter.com/${handle}`;
-      setDiag('diag-memento', '<span class="check"><span class="spinner"></span>Querying Wayback for handle…</span>', 'muted');
-      mementoCounts = {}; // no Memento for handles, only Wayback
-      waybackDetail = null;
-      renderTargets();
-
-      verifyAbort = new AbortController();
-      const wb = await checkWaybackCDX(handleURL, verifyAbort.signal);
-      if (rawInput !== inputAtStart) return;
-      waybackDetail = wb;
-      cache[cacheKey] = { live: { code: null, label: 'N/A (handle)' }, memento: {}, wayback: wb, ts: Date.now() };
-      paintDiagnostics();
-      renderTargets();
-      updateActionBar();
-      return;
-    }
-
-    // Full URL or domain: two-stage Wayback + Memento aggregator in parallel.
-    // Stage 1: Availability API (fast). Paints "Snapshots present" within ~1s.
-    // Stage 2: CDX (slow). Fills exact count and date range. Times out at 25s.
-    setDiag('diag-live', '<span class="check"><span class="spinner"></span>Checking…</span>', 'muted');
-    setDiag('diag-memento', '<span class="check"><span class="spinner"></span>Querying archives…</span>', 'muted');
-    mementoCounts = null;
-    waybackDetail = null;
-    renderTargets();
-
-    verifyAbort = new AbortController();
-    const signal = verifyAbort.signal;
-
-    // Fire Availability and Memento in parallel. CDX is fired separately and
-    // can be slow without blocking the user's feedback loop.
-    const fastChecks = Promise.allSettled([
-      checkWaybackAvailability(entity.normalised, signal),
-      checkMemento(entity.normalised, signal)
-    ]);
-
-    // Stage 1: paint as soon as fast checks complete
-    const [availR, mementoR] = await fastChecks;
-    if (rawInput !== inputAtStart) return;
-
-    const avail = availR.status === 'fulfilled' ? availR.value : { ok: false, error: 'Network error' };
-    if (avail.ok && avail.available) {
-      // Provisional waybackDetail: we know snapshots exist, count pending
-      waybackDetail = {
-        ok: true,
-        count: null,           // null = "present, count pending"
-        first: avail.timestamp,
-        last: avail.timestamp,
-        lastStatus: avail.status,
-        capped: false,
-        pending: true
-      };
-    } else if (avail.ok && !avail.available) {
-      // Definitively no Wayback snapshots
-      waybackDetail = { ok: true, count: 0, first: null, last: null, lastStatus: null, capped: false };
-    } else {
-      // Availability failed; try CDX directly as fallback
-      waybackDetail = null;
-    }
-
-    if (mementoR.status === 'fulfilled') {
-      mementoCounts = mementoR.value.ok ? mementoR.value.counts : {};
-      if (!mementoR.value.ok) console.warn('Memento aggregator:', mementoR.value.error);
-    } else {
-      mementoCounts = {};
-    }
-
-    liveStatus = { code: null, ok: null, label: 'Pending CDX' };
-    paintDiagnostics();
-    renderTargets();
-    updateActionBar();
-
-    // Stage 2: CDX in background. Updates Wayback row when it completes (or times out).
-    if (avail.ok && avail.available) {
-      const cdxR = await Promise.allSettled([checkWaybackCDX(entity.normalised, signal)]);
-      if (rawInput !== inputAtStart) return;
-      const cdx = cdxR[0].status === 'fulfilled' ? cdxR[0].value : { ok: false, error: 'Network error', errorKind: 'network' };
-      if (cdx.ok) {
-        waybackDetail = cdx;
-      } else {
-        // Keep the "snapshots present" indicator from stage 1, but mark count as failed
-        waybackDetail = {
-          ok: true,
-          count: null,
-          first: avail.timestamp,
-          last: avail.timestamp,
-          lastStatus: avail.status,
-          capped: false,
-          pending: false,
-          countFailed: cdx.errorKind || 'unknown',
-          countError: cdx.error
-        };
-      }
-    } else if (!avail.ok) {
-      // Availability failed — try CDX as fallback (slower path)
-      const cdxR = await Promise.allSettled([checkWaybackCDX(entity.normalised, signal)]);
-      if (rawInput !== inputAtStart) return;
-      const cdx = cdxR[0].status === 'fulfilled' ? cdxR[0].value : { ok: false, error: 'Network error', errorKind: 'network' };
-      waybackDetail = cdx.ok ? cdx : { ok: false, error: cdx.error, errorKind: cdx.errorKind || 'unknown' };
-    }
-
-    cache[cacheKey] = {
-      live: liveStatus,
-      memento: mementoCounts,
-      wayback: waybackDetail,
-      ts: Date.now()
-    };
-
-    paintDiagnostics();
-    renderTargets();
-    updateActionBar();
   }
 
   // ---------- ACTIONS ----------
@@ -2415,13 +1968,6 @@
       return;
     }
 
-    let mementoDatetime = null;
-    if (t.id === 'archive-org' && waybackDetail && waybackDetail.ok && waybackDetail.last) {
-      mementoDatetime = formatMementoDatetime(waybackDetail.last);
-    } else if (t.memento && mementoCounts && mementoCounts[t.memento] && mementoCounts[t.memento].last) {
-      mementoDatetime = formatMementoDatetime(mementoCounts[t.memento].last);
-    }
-
     log.push({
       timestamp: new Date().toISOString(),
       action: 'fire',
@@ -2431,8 +1977,6 @@
       sha256: currentHash,
       entity: currentEntity.type,
       url: url,
-      mementoDatetime: mementoDatetime,
-      liveStatus: liveStatus ? liveStatus.label : null
     });
     firedTargets.set(id, (firedTargets.get(id) || 0) + 1);
 
@@ -2486,19 +2030,17 @@
     }
   }
 
-  function selectFound() {
+  function selectPinned() {
     if (!currentEntity) return;
     selected.clear();
+    const cyrillic = isCyrillic(rawInput);
     for (const t of TARGETS) {
       if (!t.accepts.includes(currentEntity.type)) continue;
-      const hasWayback = (t.id === 'archive-org' && waybackDetail && waybackDetail.ok &&
-        (waybackDetail.count > 0 || waybackDetail.pending || waybackDetail.countFailed));
-      const hasMemento = (t.memento && mementoCounts && mementoCounts[t.memento] && mementoCounts[t.memento].count > 0);
-      if (hasWayback || hasMemento) selected.add(t.id);
+      if (isPinned(t, currentEntity) || (cyrillic && t.cyrillicPin)) selected.add(t.id);
     }
     renderTargets();
     updateActionBar();
-    showToast(`Selected ${selected.size} confirmed`);
+    showToast(`Selected ${selected.size} pinned`);
   }
 
   function selectAll() {
@@ -2529,14 +2071,13 @@
   // ---------- EXPORT ----------
   function exportCSV() {
     const rows = [
-      ['timestamp', 'action', 'target_id', 'target_name', 'input_raw', 'input_normalised', 'sha256', 'entity_type', 'memento_datetime', 'live_status', 'url']
+      ['timestamp', 'action', 'target_id', 'target_name', 'input_raw', 'input_normalised', 'sha256', 'entity_type', 'url']
     ];
     log.forEach(e => {
       const t = TARGETS.find(x => x.id === e.target);
       rows.push([
         e.timestamp, e.action, e.target, t ? t.name : e.target,
-        e.input, e.normalised || '', e.sha256 || '', e.entity,
-        e.mementoDatetime || '', e.liveStatus || '', e.url
+        e.input, e.normalised || '', e.sha256 || '', e.entity, e.url
       ]);
     });
     const csv = rows.map(r => r.map(c => `"${String(c).replace(/"/g, '""')}"`).join(',')).join('\n');
@@ -2547,12 +2088,11 @@
     let md = '---\n';
     md += `session_id: ${sessionId}\n`;
     md += `tool: SIG-ARC-001\n`;
-    md += `tool_version: v0.1.2\n`;
+    md += `tool_version: v0.2\n`;
     md += `started: ${sessionStart.toISOString()}\n`;
     md += `target_url_raw: ${rawInput || ''}\n`;
     md += `target_url_normalised: ${normalisedInput || ''}\n`;
     md += `target_sha256: ${currentHash || ''}\n`;
-    md += `live_status: ${liveStatus ? liveStatus.label : ''}\n`;
     md += `pivots_fired: ${log.filter(e => e.action === 'fire').length}\n`;
     md += `unique_archives: ${new Set(log.filter(e => e.action === 'fire').map(e => e.target)).size}\n`;
     md += `standard: LST-001 v1.0.3, SIG-STD-002 v2.0\n`;
@@ -2563,12 +2103,12 @@
       md += `Normalised target: \`${normalisedInput}\`\n\n`;
     }
     md += `## Activity log\n\n`;
-    md += `| UTC | Action | Archive | Memento-Datetime | URL |\n`;
-    md += `|---|---|---|---|---|\n`;
+    md += `| UTC | Action | Archive | URL |\n`;
+    md += `|---|---|---|---|\n`;
     log.forEach(e => {
       const t = TARGETS.find(x => x.id === e.target);
       const tgt = t ? t.name : e.target;
-      md += `| ${e.timestamp.slice(11, 19)} | ${e.action} | ${tgt} | ${e.mementoDatetime || '—'} | ${e.url} |\n`;
+      md += `| ${e.timestamp.slice(11, 19)} | ${e.action} | ${tgt} | ${e.url} |\n`;
     });
     md += `\n---\n\n_Exported from Signal & Shadow Archive Trail. signalandshadow.io_\n`;
     download(`${sessionId}.md`, md, 'text/markdown');
@@ -2599,14 +2139,13 @@
     document.getElementById('print-target-raw').textContent = rawInput || '—';
     document.getElementById('print-target').textContent = normalisedInput || rawInput || '—';
     document.getElementById('print-hash').textContent = currentHash || '—';
-    document.getElementById('print-live').textContent = liveStatus ? liveStatus.label : '—';
     document.getElementById('print-pivots').textContent = log.filter(e => e.action === 'fire').length;
     if (log.length > 0) {
       document.getElementById('print-log-table').style.display = 'table';
       const rows = log.map(e => {
         const t = TARGETS.find(x => x.id === e.target);
         const tgt = t ? t.name : e.target;
-        return `<tr><td>${e.timestamp.slice(0, 19).replace('T', ' ')}</td><td>${e.action}</td><td>${escapeHTML(tgt)}</td><td>${escapeHTML(e.mementoDatetime || '—')}</td><td style="word-break: break-all; font-size: 7.5pt;">${escapeHTML(e.url)}</td></tr>`;
+        return `<tr><td>${e.timestamp.slice(0, 19).replace('T', ' ')}</td><td>${e.action}</td><td>${escapeHTML(tgt)}</td><td style="word-break: break-all; font-size: 7.5pt;">${escapeHTML(e.url)}</td></tr>`;
       }).join('');
       document.getElementById('print-log-rows').innerHTML = rows;
     }
@@ -2681,10 +2220,6 @@
   }
 
   // ---------- INIT ----------
-  // Show the file:// warning when running locally (CORS will block all archive requests)
-  if (window.location.protocol === 'file:') {
-    document.getElementById('file-warning').classList.add('show');
-  }
   updateActionBar();
   updateSession();
 </script>
