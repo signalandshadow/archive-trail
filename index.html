@@ -1,0 +1,2573 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Archive Trail · Signal & Shadow</title>
+<meta name="description" content="Federated archive discovery. Paste a URL. See where snapshots exist before you click. Session-logged. Citation-ready.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0A0E14;
+    --bg-elev: #0F141C;
+    --bg-card: #131923;
+    --bg-card-hover: #18202D;
+    --line: #1F2937;
+    --line-bright: #2D3B4F;
+    --ink: #E8EBF0;
+    --ink-soft: #B0B8C5;
+    --ink-faint: #6B7888;
+    --ink-mute: #4A5564;
+    --navy: #2A1B3D;
+    --teal: #32BB93;
+    --teal-bright: #4DD9AE;
+    --teal-deep: #1F8F6E;
+    --teal-tint: rgba(50, 187, 147, 0.12);
+    --teal-glow: rgba(50, 187, 147, 0.15);
+    --amber: #E89D3C;
+    --rust: #C24914;
+    --vermillion: #D14242;
+    --sans: 'Geist', -apple-system, BlinkMacSystemFont, sans-serif;
+    --mono: 'JetBrains Mono', ui-monospace, Menlo, monospace;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  html, body {
+    background: var(--bg);
+    color: var(--ink);
+    font-family: var(--sans);
+    font-size: 15px;
+    line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+  }
+
+  a { color: inherit; text-decoration: none; transition: color 0.15s; }
+
+  /* Focus rings: visible but on-brand */
+  *:focus-visible {
+    outline: 2px solid var(--teal);
+    outline-offset: 2px;
+  }
+  /* Buttons get a denser ring */
+  button:focus-visible, .target-fire:focus-visible, .btn-mini:focus-visible,
+  .btn-primary:focus-visible, .btn-ghost:focus-visible, .btn-clear:focus-visible {
+    outline: 2px solid var(--teal-bright);
+    outline-offset: 2px;
+  }
+
+  .wrap { max-width: 1240px; margin: 0 auto; padding: 0 32px; }
+
+  /* Skip link for keyboard users */
+  .skip-link {
+    position: absolute;
+    left: -9999px;
+    top: 0;
+    background: var(--teal);
+    color: var(--bg);
+    padding: 10px 16px;
+    font-family: var(--mono);
+    font-size: 11px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    font-weight: 600;
+    z-index: 1000;
+  }
+  .skip-link:focus {
+    left: 16px;
+    top: 16px;
+  }
+
+  /* ============ STATUS BAR ============ */
+  .status-bar {
+    background: var(--bg-elev);
+    border-bottom: 0.5px solid var(--line);
+    padding: 10px 0;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+  }
+  .status-bar .row {
+    display: grid;
+    grid-template-columns: auto 1fr auto auto;
+    align-items: center;
+    gap: 24px;
+    font-family: var(--mono);
+    font-size: 10px;
+    letter-spacing: 0.12em;
+    color: var(--ink-faint);
+    text-transform: uppercase;
+  }
+  .status-bar .sys-id { color: var(--teal); font-weight: 600; }
+  .status-bar .breadcrumb { color: var(--ink-faint); }
+  .status-bar .pulse { display: flex; align-items: center; gap: 7px; color: var(--teal); }
+  .status-bar .pulse .dot {
+    display: inline-block;
+    width: 6px;
+    height: 6px;
+    background: var(--teal);
+    border-radius: 50%;
+    box-shadow: 0 0 8px var(--teal);
+    animation: pulse 2.4s ease-in-out infinite;
+  }
+  @keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.4; }
+  }
+
+  /* ============ MASTHEAD ============ */
+  .masthead {
+    background: var(--bg);
+    border-bottom: 0.5px solid var(--line);
+    padding: 56px 0 40px;
+    position: relative;
+    overflow: hidden;
+  }
+  .masthead::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(ellipse 60% 40% at 80% 30%, var(--teal-glow) 0%, transparent 50%);
+    pointer-events: none;
+  }
+  .masthead .inner { position: relative; }
+  .eyebrow {
+    font-family: var(--mono);
+    font-size: 10px;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: var(--teal);
+    margin-bottom: 18px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .eyebrow::before {
+    content: '';
+    display: inline-block;
+    width: 18px;
+    height: 0.5px;
+    background: var(--teal);
+  }
+  h1.title {
+    font-family: var(--sans);
+    font-size: 56px;
+    font-weight: 600;
+    line-height: 1.02;
+    letter-spacing: -0.035em;
+    margin-bottom: 18px;
+    color: var(--ink);
+    max-width: 880px;
+  }
+  h1.title em {
+    font-style: normal;
+    color: var(--teal);
+    font-weight: 600;
+  }
+  .lede {
+    font-size: 16px;
+    line-height: 1.55;
+    color: var(--ink-soft);
+    max-width: 620px;
+    margin-bottom: 36px;
+  }
+
+  /* ============ INPUT BLOCK ============ */
+  .input-block {
+    background: var(--bg-card);
+    border: 1px solid var(--line-bright);
+    padding: 24px;
+    position: relative;
+    max-width: 920px;
+  }
+  .input-block::before,
+  .input-block::after {
+    content: '';
+    position: absolute;
+    width: 14px;
+    height: 14px;
+    border-color: var(--teal);
+    border-style: solid;
+    pointer-events: none;
+  }
+  .input-block::before {
+    top: -1px;
+    left: -1px;
+    border-width: 1px 0 0 1px;
+  }
+  .input-block::after {
+    bottom: -1px;
+    right: -1px;
+    border-width: 0 1px 1px 0;
+  }
+  .input-label {
+    font-family: var(--mono);
+    font-size: 9px;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: var(--teal);
+    margin-bottom: 10px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .input-label::before {
+    content: '';
+    width: 5px;
+    height: 5px;
+    background: var(--teal);
+    box-shadow: 0 0 6px var(--teal);
+  }
+  .input-row {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 12px;
+    align-items: stretch;
+  }
+  .target-input {
+    background: var(--bg);
+    border: 1px solid var(--line);
+    padding: 14px 16px;
+    font-family: var(--mono);
+    font-size: 14px;
+    color: var(--ink);
+    width: 100%;
+    transition: border-color 0.15s;
+  }
+  .target-input:focus {
+    outline: none;
+    border-color: var(--teal);
+  }
+  .target-input::placeholder { color: var(--ink-faint); }
+
+  .btn-clear {
+    font-family: var(--mono);
+    font-size: 10px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    padding: 0 18px;
+    background: transparent;
+    border: 1px solid var(--line-bright);
+    color: var(--ink-soft);
+    cursor: pointer;
+    font-weight: 600;
+    transition: all 0.15s;
+  }
+  .btn-clear:hover {
+    border-color: var(--teal);
+    color: var(--teal);
+  }
+
+  /* Normalised URL preview */
+  .normalised-row {
+    margin-top: 10px;
+    font-family: var(--mono);
+    font-size: 10px;
+    letter-spacing: 0.04em;
+    color: var(--ink-faint);
+    display: none;
+    gap: 8px;
+    align-items: center;
+  }
+  .normalised-row.show { display: flex; }
+  .normalised-row .label { color: var(--ink-mute); text-transform: uppercase; letter-spacing: 0.1em; }
+  .normalised-row .value { color: var(--teal); }
+
+  /* ============ DIAGNOSTIC GRID ============ */
+  .diag-grid {
+    margin-top: 16px;
+    padding-top: 16px;
+    border-top: 0.5px solid var(--line);
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 0;
+    border: 0.5px solid var(--line);
+    border-top: 0.5px solid var(--line);
+  }
+  .diag-cell {
+    padding: 12px 14px;
+    border-right: 0.5px solid var(--line);
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    min-width: 0;
+  }
+  .diag-cell:last-child { border-right: none; }
+  .diag-cell .label {
+    font-family: var(--mono);
+    font-size: 9px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--ink-faint);
+  }
+  .diag-cell .value {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--ink);
+    letter-spacing: 0.04em;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    transition: color 0.25s ease;
+  }
+  .diag-cell .value.ok { color: var(--teal); }
+  .diag-cell .value.warn { color: var(--amber); }
+  .diag-cell .value.err { color: var(--vermillion); }
+  .diag-cell .value.muted { color: var(--ink-mute); font-style: italic; }
+  .diag-cell .value .check {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+  }
+  .diag-cell .value .check::before {
+    content: '';
+    width: 5px;
+    height: 5px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+  .diag-cell .value.ok .check::before { background: var(--teal); box-shadow: 0 0 6px var(--teal); }
+  .diag-cell .value.warn .check::before { background: var(--amber); }
+  .diag-cell .value.err .check::before { background: var(--vermillion); }
+  .diag-cell .value.muted .check::before { background: var(--ink-mute); }
+
+  .spinner {
+    display: inline-block;
+    width: 9px;
+    height: 9px;
+    border: 1.5px solid var(--line-bright);
+    border-top-color: var(--teal);
+    border-radius: 50%;
+    animation: spin 0.7s linear infinite;
+    margin-right: 5px;
+    vertical-align: -1px;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* ============ ACTION BAR ============ */
+  .action-bar {
+    background: var(--bg-elev);
+    border-bottom: 0.5px solid var(--line);
+    padding: 16px 0;
+    position: sticky;
+    top: 36px;
+    z-index: 90;
+  }
+  .action-bar .row {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 24px;
+    align-items: center;
+  }
+  .action-meta {
+    font-family: var(--mono);
+    font-size: 11px;
+    letter-spacing: 0.08em;
+    color: var(--ink-soft);
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    flex-wrap: wrap;
+  }
+  .action-meta .num {
+    color: var(--teal);
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+  }
+  .action-meta .sep { color: var(--ink-mute); }
+  .action-buttons {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+  .btn-primary {
+    font-family: var(--mono);
+    font-size: 10px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    padding: 10px 16px;
+    background: var(--teal);
+    color: var(--bg);
+    border: 1px solid var(--teal);
+    cursor: pointer;
+    font-weight: 600;
+    transition: all 0.15s;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .btn-primary:hover {
+    background: var(--teal-bright);
+    border-color: var(--teal-bright);
+    box-shadow: 0 0 16px var(--teal-glow);
+  }
+  .btn-primary:disabled {
+    background: transparent;
+    color: var(--ink-mute);
+    border-color: var(--line);
+    cursor: not-allowed;
+    box-shadow: none;
+  }
+  .btn-ghost {
+    font-family: var(--mono);
+    font-size: 10px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    padding: 10px 16px;
+    background: transparent;
+    color: var(--ink);
+    border: 1px solid var(--line-bright);
+    cursor: pointer;
+    font-weight: 500;
+    transition: all 0.15s;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .btn-ghost:hover {
+    border-color: var(--teal);
+    color: var(--teal);
+  }
+  .btn-ghost:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+  }
+
+  /* ============ LAYOUT ============ */
+  .layout {
+    display: grid;
+    grid-template-columns: 1fr 340px;
+    gap: 32px;
+    padding: 32px 0 64px;
+  }
+
+  /* ============ INTENT GROUPS ============ */
+  .intent-group { margin-bottom: 32px; }
+  .intent-group:last-child { margin-bottom: 0; }
+
+  .intent-head {
+    display: grid;
+    grid-template-columns: auto 1fr auto;
+    align-items: baseline;
+    gap: 16px;
+    margin-bottom: 16px;
+    padding-bottom: 12px;
+    border-bottom: 0.5px solid var(--line);
+  }
+  .intent-tag {
+    font-family: var(--mono);
+    font-size: 10px;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: var(--teal);
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .intent-tag::before {
+    content: '';
+    width: 6px;
+    height: 6px;
+    background: var(--teal);
+    box-shadow: 0 0 6px var(--teal);
+  }
+  .intent-head h2 {
+    font-family: var(--sans);
+    font-size: 18px;
+    font-weight: 600;
+    letter-spacing: -0.02em;
+    color: var(--ink);
+  }
+  .intent-meta {
+    font-family: var(--mono);
+    font-size: 10px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--ink-faint);
+  }
+  .intent-meta .v { color: var(--teal); }
+
+  /* ============ TARGET ROWS ============ */
+  .targets {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 0;
+  }
+  .target {
+    display: grid;
+    grid-template-columns: 24px 1fr 200px auto;
+    gap: 14px;
+    align-items: center;
+    padding: 14px 16px;
+    border: 1px solid var(--line);
+    border-bottom: none;
+    background: var(--bg-card);
+    transition: background 0.18s ease, border-color 0.18s ease;
+  }
+  .target:last-child { border-bottom: 1px solid var(--line); }
+  .target:hover { background: var(--bg-card-hover); }
+  .target.dimmed { opacity: 0.4; }
+  .target.dimmed:hover { background: var(--bg-card); }
+  .target.pinned {
+    border-color: var(--teal-deep);
+    background:
+      linear-gradient(90deg, var(--teal-tint) 0%, transparent 24%),
+      var(--bg-card);
+  }
+  .target.pinned:hover {
+    background:
+      linear-gradient(90deg, var(--teal-tint) 0%, transparent 24%),
+      var(--bg-card-hover);
+  }
+  /* Keyboard navigation: highlighted row */
+  .target.kb-focus {
+    background: var(--bg-card-hover);
+    border-color: var(--teal);
+  }
+
+  .target-check {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .target-check input[type="checkbox"] {
+    appearance: none;
+    width: 14px;
+    height: 14px;
+    border: 1px solid var(--line-bright);
+    background: var(--bg);
+    cursor: pointer;
+    position: relative;
+    transition: all 0.15s;
+  }
+  .target-check input[type="checkbox"]:checked {
+    background: var(--teal);
+    border-color: var(--teal);
+  }
+  .target-check input[type="checkbox"]:checked::after {
+    content: '';
+    position: absolute;
+    top: 1px;
+    left: 4px;
+    width: 4px;
+    height: 8px;
+    border: solid var(--bg);
+    border-width: 0 1.5px 1.5px 0;
+    transform: rotate(45deg);
+  }
+  .target-check input[type="checkbox"]:disabled {
+    opacity: 0.3;
+    cursor: not-allowed;
+  }
+
+  .target-main { min-width: 0; }
+  .target-name-row {
+    display: flex;
+    align-items: baseline;
+    gap: 10px;
+    margin-bottom: 4px;
+    flex-wrap: wrap;
+  }
+  .target-name {
+    font-family: var(--sans);
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--ink);
+    letter-spacing: -0.01em;
+  }
+  .target-domain {
+    font-family: var(--mono);
+    font-size: 10px;
+    color: var(--ink-faint);
+    letter-spacing: 0.04em;
+  }
+  .target-tag {
+    font-family: var(--mono);
+    font-size: 8px;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    padding: 2px 6px;
+    background: rgba(50, 187, 147, 0.08);
+    border: 0.5px solid var(--teal-deep);
+    color: var(--teal);
+    font-weight: 600;
+  }
+  .target-tag.warn {
+    background: rgba(232, 157, 60, 0.08);
+    border-color: var(--amber);
+    color: var(--amber);
+  }
+  .target-tag.region {
+    background: transparent;
+    border-color: var(--line-bright);
+    color: var(--ink-soft);
+  }
+  .target-tag.pin {
+    background: var(--teal);
+    border-color: var(--teal);
+    color: var(--bg);
+  }
+  .target-note {
+    font-size: 12.5px;
+    line-height: 1.5;
+    color: var(--ink-soft);
+  }
+
+  /* ============ DISCOVERY STATUS COLUMN ============ */
+  .target-discovery {
+    font-family: var(--mono);
+    font-size: 10px;
+    letter-spacing: 0.04em;
+    line-height: 1.45;
+    color: var(--ink-soft);
+    min-width: 0;
+    transition: opacity 0.25s ease;
+  }
+  .discovery-line {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-bottom: 1px;
+  }
+  .discovery-line:last-child { margin-bottom: 0; }
+  .discovery-line .marker {
+    width: 12px;
+    text-align: center;
+    flex-shrink: 0;
+    font-weight: 700;
+    font-size: 11px;
+  }
+  .discovery-line.ok { color: var(--ink); }
+  .discovery-line.ok .marker { color: var(--teal); }
+  .discovery-line.none { color: var(--ink-mute); }
+  .discovery-line.none .marker { color: var(--ink-mute); }
+  .discovery-line.manual { color: var(--ink-soft); }
+  .discovery-line.manual .marker { color: var(--amber); }
+  .discovery-line.checking { color: var(--ink-faint); }
+  .discovery-line.checking .marker { color: var(--ink-faint); }
+  .discovery-line.error { color: var(--vermillion); }
+  .discovery-line.error .marker { color: var(--vermillion); }
+
+  .discovery-detail {
+    font-size: 9.5px;
+    color: var(--ink-faint);
+    letter-spacing: 0.04em;
+    margin-left: 18px;
+    line-height: 1.4;
+  }
+  .discovery-count {
+    font-weight: 600;
+    color: var(--ink);
+    font-variant-numeric: tabular-nums;
+  }
+
+  .target-fire {
+    font-family: var(--mono);
+    font-size: 10px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    padding: 6px 12px;
+    background: transparent;
+    color: var(--ink);
+    border: 1px solid var(--line-bright);
+    cursor: pointer;
+    font-weight: 600;
+    transition: all 0.15s;
+    white-space: nowrap;
+  }
+  .target-fire:hover {
+    border-color: var(--teal);
+    color: var(--teal);
+    background: var(--teal-tint);
+  }
+  .target-fire:disabled {
+    opacity: 0.3;
+    cursor: not-allowed;
+    pointer-events: none;
+  }
+  .target-fire.fired {
+    border-color: var(--teal-deep);
+    color: var(--teal);
+    background: var(--teal-tint);
+  }
+
+  /* Visually hidden for screen readers only */
+  .sr-only {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+  }
+
+  /* ============ SIDEBAR (SESSION LOG) ============ */
+  aside.session {
+    position: sticky;
+    top: 100px;
+    align-self: start;
+    max-height: calc(100vh - 120px);
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+  }
+
+  .session-card {
+    background: var(--bg-card);
+    border: 1px solid var(--line);
+    margin-bottom: 12px;
+  }
+  .session-card.bracket {
+    border-color: var(--line-bright);
+    position: relative;
+  }
+  .session-card.bracket::before {
+    content: '';
+    position: absolute;
+    top: -1px;
+    left: -1px;
+    width: 12px;
+    height: 12px;
+    border-top: 1px solid var(--teal);
+    border-left: 1px solid var(--teal);
+  }
+  .session-card.bracket::after {
+    content: '';
+    position: absolute;
+    bottom: -1px;
+    right: -1px;
+    width: 12px;
+    height: 12px;
+    border-bottom: 1px solid var(--teal);
+    border-right: 1px solid var(--teal);
+  }
+
+  .session-head {
+    padding: 12px 14px;
+    border-bottom: 0.5px solid var(--line);
+    background: var(--bg-elev);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-family: var(--mono);
+    font-size: 10px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--teal);
+    font-weight: 600;
+  }
+  .session-head .count { color: var(--ink-faint); font-weight: 400; }
+
+  .session-stats {
+    padding: 14px;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+  }
+  .session-stat {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+  .session-stat .num {
+    font-family: var(--sans);
+    font-size: 22px;
+    font-weight: 600;
+    color: var(--teal);
+    letter-spacing: -0.02em;
+    line-height: 1;
+  }
+  .session-stat .lbl {
+    font-family: var(--mono);
+    font-size: 9px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--ink-faint);
+  }
+
+  .log-list {
+    max-height: 340px;
+    overflow-y: auto;
+    font-family: var(--mono);
+  }
+  .log-list::-webkit-scrollbar { width: 6px; }
+  .log-list::-webkit-scrollbar-track { background: var(--bg); }
+  .log-list::-webkit-scrollbar-thumb { background: var(--line-bright); }
+
+  .log-entry {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    gap: 8px;
+    padding: 8px 14px;
+    border-bottom: 0.5px solid var(--line);
+    font-size: 10px;
+    line-height: 1.4;
+    align-items: start;
+  }
+  .log-entry:last-child { border-bottom: none; }
+  .log-entry .when {
+    color: var(--teal);
+    font-weight: 600;
+    letter-spacing: 0.04em;
+  }
+  .log-entry .what {
+    color: var(--ink-soft);
+    overflow-wrap: break-word;
+    word-break: break-word;
+    min-width: 0;
+  }
+  .log-entry .what .name { color: var(--ink); font-weight: 600; }
+  .log-entry .what .tgt { color: var(--ink-faint); }
+  .log-entry .what .memento {
+    color: var(--teal);
+    font-size: 9px;
+    letter-spacing: 0.06em;
+  }
+
+  .log-empty {
+    padding: 24px 14px;
+    font-family: var(--mono);
+    font-size: 10px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--ink-mute);
+    text-align: center;
+    line-height: 1.6;
+  }
+
+  .session-actions {
+    padding: 12px 14px;
+    border-top: 0.5px solid var(--line);
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+  }
+  .btn-mini {
+    font-family: var(--mono);
+    font-size: 9px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    padding: 8px 10px;
+    background: transparent;
+    border: 1px solid var(--line-bright);
+    color: var(--ink-soft);
+    cursor: pointer;
+    font-weight: 600;
+    transition: all 0.15s;
+    text-align: center;
+  }
+  .btn-mini:hover {
+    border-color: var(--teal);
+    color: var(--teal);
+  }
+  .btn-mini:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+  }
+  .btn-mini.full { grid-column: 1 / -1; }
+
+  /* ============ CITATION CARD ============ */
+  .citation-card {
+    background: var(--bg-card);
+    border: 1px solid var(--line);
+    padding: 14px;
+    margin-bottom: 12px;
+  }
+  .citation-card .citation-label {
+    font-family: var(--mono);
+    font-size: 9px;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: var(--teal);
+    margin-bottom: 8px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .citation-card .citation-label::before {
+    content: '';
+    width: 5px;
+    height: 5px;
+    background: var(--teal);
+  }
+  .citation-card .citation-body {
+    font-family: var(--mono);
+    font-size: 10.5px;
+    line-height: 1.6;
+    color: var(--ink-soft);
+    background: var(--bg);
+    padding: 10px;
+    border: 0.5px solid var(--line);
+    margin-bottom: 8px;
+    word-break: break-word;
+  }
+  .citation-card .citation-body .key { color: var(--teal); }
+  .citation-card .citation-body .val { color: var(--ink); }
+
+  /* ============ KBD HELP CARD ============ */
+  .kbd-card {
+    background: transparent;
+    padding: 0 14px;
+    margin-bottom: 12px;
+  }
+  .kbd-list {
+    font-family: var(--mono);
+    font-size: 9px;
+    letter-spacing: 0.06em;
+    color: var(--ink-faint);
+    line-height: 1.7;
+  }
+  .kbd-list .key {
+    display: inline-block;
+    background: var(--bg-card);
+    border: 0.5px solid var(--line-bright);
+    padding: 1px 6px;
+    color: var(--ink-soft);
+    margin-right: 4px;
+    min-width: 18px;
+    text-align: center;
+  }
+
+  /* ============ FILE PROTOCOL WARNING ============ */
+  .file-warning {
+    display: none;
+    background: rgba(232, 157, 60, 0.08);
+    border-bottom: 1px solid var(--amber);
+    padding: 12px 0;
+  }
+  .file-warning.show { display: block; }
+  .file-warning .row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    font-family: var(--mono);
+    font-size: 11px;
+    letter-spacing: 0.04em;
+    color: var(--amber);
+  }
+  .file-warning .marker {
+    width: 8px;
+    height: 8px;
+    background: var(--amber);
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+  .file-warning .label {
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.14em;
+    font-size: 10px;
+  }
+  .file-warning .body { color: var(--ink-soft); }
+  .file-warning code {
+    background: var(--bg-card);
+    padding: 1px 6px;
+    border: 0.5px solid var(--line-bright);
+    color: var(--ink);
+  }
+
+  /* ============ FOOTER ============ */
+  footer.site {
+    background: var(--bg-elev);
+    border-top: 0.5px solid var(--line);
+    padding: 24px 0;
+    margin-top: 24px;
+  }
+  footer.site .row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    justify-content: center;
+    font-family: var(--mono);
+    font-size: 10px;
+    letter-spacing: 0.1em;
+    color: var(--ink-faint);
+    text-transform: uppercase;
+  }
+  footer.site .row .accent { color: var(--teal); }
+  footer.site .sep { color: var(--ink-mute); }
+
+  /* ============ TOAST ============ */
+  .toast {
+    position: fixed;
+    bottom: 24px;
+    left: 50%;
+    transform: translateX(-50%) translateY(80px);
+    background: var(--bg-card);
+    border: 1px solid var(--teal-deep);
+    padding: 12px 20px;
+    font-family: var(--mono);
+    font-size: 11px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--teal);
+    z-index: 200;
+    transition: transform 0.25s ease;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    box-shadow: 0 0 24px var(--teal-glow);
+    max-width: 90vw;
+  }
+  .toast.show { transform: translateX(-50%) translateY(0); }
+  .toast::before {
+    content: '';
+    width: 6px;
+    height: 6px;
+    background: var(--teal);
+    border-radius: 50%;
+    box-shadow: 0 0 6px var(--teal);
+    flex-shrink: 0;
+  }
+  .toast.error { border-color: var(--vermillion); color: var(--vermillion); }
+  .toast.error::before { background: var(--vermillion); box-shadow: 0 0 6px var(--vermillion); }
+
+  /* ============ EMPTY STATE ============ */
+  .empty-prompt {
+    padding: 80px 24px;
+    text-align: center;
+    border: 0.5px dashed var(--line);
+    background: var(--bg-elev);
+  }
+  .empty-prompt .e-title {
+    font-family: var(--sans);
+    font-size: 20px;
+    font-weight: 600;
+    color: var(--ink);
+    margin-bottom: 10px;
+    letter-spacing: -0.02em;
+  }
+  .empty-prompt .e-desc {
+    font-size: 13px;
+    color: var(--ink-soft);
+    max-width: 460px;
+    margin: 0 auto 24px;
+    line-height: 1.6;
+  }
+  .empty-prompt .e-hints {
+    display: inline-flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    justify-content: center;
+    max-width: 520px;
+  }
+  .e-hint {
+    font-family: var(--mono);
+    font-size: 10px;
+    letter-spacing: 0.08em;
+    padding: 7px 12px;
+    background: var(--bg-card);
+    border: 0.5px solid var(--line);
+    color: var(--ink-soft);
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .e-hint:hover {
+    background: var(--bg-card-hover);
+    color: var(--teal);
+    border-color: var(--line-bright);
+  }
+  .e-hint .label { color: var(--teal); margin-right: 6px; }
+
+  /* ============ MOBILE ============ */
+  @media (max-width: 1100px) {
+    .target { grid-template-columns: 24px 1fr 160px auto; }
+  }
+  @media (max-width: 900px) {
+    .wrap { padding: 0 20px; }
+    h1.title { font-size: 36px; }
+    .layout { grid-template-columns: 1fr; gap: 24px; }
+    aside.session { position: static; max-height: none; }
+    .log-list { max-height: 240px; }
+    .target {
+      grid-template-columns: 24px 1fr auto;
+      grid-template-areas:
+        "check main fire"
+        "check disc disc";
+    }
+    .target-check { grid-area: check; align-self: start; padding-top: 4px; }
+    .target-main { grid-area: main; }
+    .target-discovery { grid-area: disc; padding-top: 8px; border-top: 0.5px dashed var(--line); margin-top: 6px; }
+    .target-fire { grid-area: fire; align-self: start; }
+    .diag-grid { grid-template-columns: 1fr 1fr; }
+    .diag-cell { border-right: none; border-bottom: 0.5px solid var(--line); }
+    .diag-cell:nth-child(odd) { border-right: 0.5px solid var(--line); }
+    .diag-cell:nth-last-child(-n+2) { border-bottom: none; }
+    .status-bar .row { grid-template-columns: 1fr 1fr; gap: 8px; }
+    .status-bar .row > *:nth-child(2),
+    .status-bar .row > *:nth-child(4) { display: none; }
+    .action-bar .row { grid-template-columns: 1fr; gap: 12px; }
+    .action-buttons { flex-wrap: wrap; }
+  }
+  @media (max-width: 600px) {
+    .masthead { padding: 40px 0 28px; }
+    h1.title { font-size: 28px; }
+    .lede { font-size: 14px; }
+    .input-row { grid-template-columns: 1fr; }
+    .btn-clear { padding: 12px; }
+    .diag-grid { grid-template-columns: 1fr; }
+    .diag-cell { border-right: none !important; }
+  }
+
+  /* ============ PRINT ============ */
+  @media print {
+    @page { margin: 1.6cm; size: A4; }
+    body {
+      background: white;
+      color: black;
+      font-size: 10pt;
+    }
+    .skip-link, .status-bar, .masthead::before, aside.session, .action-bar, footer.site, .toast,
+    .empty-prompt, .input-block, .target-check, .target-fire, .btn-clear {
+      display: none !important;
+    }
+    .layout {
+      display: block;
+      padding: 0;
+    }
+    .wrap { max-width: 100%; padding: 0; }
+    .masthead {
+      padding: 0 0 18pt;
+      border-bottom: 1pt solid black;
+      margin-bottom: 18pt;
+    }
+    .eyebrow {
+      color: black;
+      font-size: 8pt;
+      margin-bottom: 8pt;
+    }
+    .eyebrow::before { background: black; }
+    h1.title {
+      font-size: 22pt;
+      color: black;
+      margin-bottom: 8pt;
+    }
+    h1.title em { color: black; font-style: italic; }
+    .lede { color: black; font-size: 10pt; max-width: 100%; }
+    .intent-head {
+      border-bottom: 0.5pt solid black;
+      margin-top: 14pt;
+    }
+    .intent-tag, .intent-head h2 { color: black; }
+    .intent-tag::before { background: black; }
+    .target {
+      background: white !important;
+      border: 0.5pt solid #999 !important;
+      page-break-inside: avoid;
+      grid-template-columns: 1fr 1fr !important;
+      padding: 8pt 10pt !important;
+      color: black;
+    }
+    .target.dimmed { display: none !important; }
+    .target-name { color: black; }
+    .target-domain, .target-note, .target-discovery { color: black; }
+    .discovery-line.ok { color: black; font-weight: 600; }
+    .discovery-line.none, .discovery-line.manual { color: #555; }
+    .target-tag, .pill { border: 0.5pt solid black; color: black; background: transparent; }
+    .print-only {
+      display: block !important;
+      margin-top: 24pt;
+      padding-top: 14pt;
+      border-top: 0.5pt solid black;
+      font-size: 9pt;
+      line-height: 1.6;
+    }
+    .print-only h2 {
+      font-size: 12pt;
+      margin-bottom: 6pt;
+      font-weight: 600;
+    }
+    .print-only .meta-row {
+      display: grid;
+      grid-template-columns: 100pt 1fr;
+      gap: 4pt;
+      margin-bottom: 3pt;
+    }
+    .print-only .meta-row .k { font-weight: 600; }
+    .print-only table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 10pt;
+      font-size: 8.5pt;
+    }
+    .print-only th, .print-only td {
+      border: 0.5pt solid #999;
+      padding: 4pt 6pt;
+      text-align: left;
+      vertical-align: top;
+    }
+    .print-only th { background: #eee; font-weight: 600; }
+  }
+  .print-only { display: none; }
+</style>
+</head>
+<body>
+
+<a class="skip-link" href="#main">Skip to results</a>
+
+<!-- Status bar -->
+<section class="status-bar" role="banner">
+  <div class="wrap row">
+    <span class="sys-id">[ S&S / OPS ]</span>
+    <span class="breadcrumb">HUB / TOOLS / ARCHIVE TRAIL</span>
+    <span class="pulse"><span class="dot" aria-hidden="true"></span>SIG-ARC-001 · v0.1.1</span>
+    <span>VERSOIX</span>
+  </div>
+</section>
+
+<!-- file:// origin warning (only shown when running locally) -->
+<div class="file-warning" id="file-warning">
+  <div class="wrap row">
+    <span class="marker" aria-hidden="true"></span>
+    <span class="label">Local file mode</span>
+    <span class="body">Federated discovery (Memento, Wayback CDX) is blocked by the browser when running from a <code>file://</code> URL. Capture counts will not populate. Open via a local server (<code>python3 -m http.server</code>) or once deployed to GitHub Pages.</span>
+  </div>
+</div>
+
+<!-- Masthead -->
+<section class="masthead">
+  <div class="wrap inner">
+    <div class="eyebrow">SIG-ARC-001 · ARCHIVE TRAIL</div>
+    <h1 class="title">See where it was.<br>Before you <em>click.</em></h1>
+    <p class="lede">Paste a URL. Archive Trail queries Memento and Wayback in the background and tells you which archives have a snapshot, when, and how many. Every pivot logged. Every snapshot timestamped. Citation-ready.</p>
+
+    <div class="input-block">
+      <label for="target-input" class="input-label">Target URL</label>
+      <div class="input-row">
+        <input id="target-input" class="target-input" type="text" placeholder="https://example.com/article  ·  example.com  ·  @handle" autocomplete="off" spellcheck="false" aria-describedby="diag-grid normalised-row">
+        <button class="btn-clear" onclick="clearInput()" aria-label="Clear input">Clear</button>
+      </div>
+      <div class="normalised-row" id="normalised-row" aria-live="polite">
+        <span class="label">Normalised:</span>
+        <span class="value" id="normalised-value"></span>
+      </div>
+      <div class="diag-grid" id="diag-grid" role="status" aria-live="polite">
+        <div class="diag-cell">
+          <span class="label">Detected</span>
+          <span class="value muted" id="diag-entity"><span class="check">Awaiting input</span></span>
+        </div>
+        <div class="diag-cell">
+          <span class="label">Live status</span>
+          <span class="value muted" id="diag-live"><span class="check">—</span></span>
+        </div>
+        <div class="diag-cell">
+          <span class="label">SHA-256 (URL)</span>
+          <span class="value muted" id="diag-hash">—</span>
+        </div>
+        <div class="diag-cell">
+          <span class="label">Federated discovery</span>
+          <span class="value muted" id="diag-memento"><span class="check">—</span></span>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Action bar -->
+<section class="action-bar" role="region" aria-label="Selection and batch actions">
+  <div class="wrap row">
+    <div class="action-meta">
+      <span><span class="num" id="selected-count">0</span> selected</span>
+      <span class="sep" aria-hidden="true">·</span>
+      <span><span class="num" id="fired-count">0</span> fired</span>
+      <span class="sep" aria-hidden="true">·</span>
+      <span><span class="num" id="found-count">0</span> with confirmed snapshots</span>
+    </div>
+    <div class="action-buttons">
+      <button class="btn-ghost" onclick="selectFound()" id="btn-found" disabled>Select confirmed</button>
+      <button class="btn-ghost" onclick="selectAll()" id="btn-all" disabled>Select all compatible</button>
+      <button class="btn-ghost" onclick="copyURLs()" id="btn-copy" disabled>Copy URLs</button>
+      <button class="btn-primary" onclick="openBatch()" id="btn-batch" disabled>Open batch →</button>
+    </div>
+  </div>
+</section>
+
+<!-- Layout -->
+<div class="wrap layout">
+
+  <main id="main">
+    <div id="empty-state" class="empty-prompt">
+      <div class="e-title">Paste a URL to begin discovery.</div>
+      <div class="e-desc">Memento and Wayback CDX are queried in the background. Verified rows show snapshot counts and date ranges before you fire anything.</div>
+      <div class="e-hints">
+        <button class="e-hint" data-hint="https://www.bbc.co.uk/news">
+          <span class="label">URL · UK</span>BBC News
+        </button>
+        <button class="e-hint" data-hint="https://www.gov.uk/government/publications/uk-sanctions-list">
+          <span class="label">URL · gov.uk</span>UK sanctions list
+        </button>
+        <button class="e-hint" data-hint="https://www.nytimes.com/2024/01/01/world/example.html">
+          <span class="label">URL · US</span>NYT article
+        </button>
+        <button class="e-hint" data-hint="bellingcat.com">
+          <span class="label">Domain</span>bellingcat.com
+        </button>
+        <button class="e-hint" data-hint="@bellingcat">
+          <span class="label">Handle</span>@bellingcat
+        </button>
+      </div>
+    </div>
+
+    <div id="results" style="display: none;" tabindex="-1"></div>
+  </main>
+
+  <aside class="session" role="complementary" aria-label="Session log and exports">
+    <div class="session-card bracket">
+      <div class="session-head">
+        <span>● Session</span>
+        <span class="count" id="session-id">SES-...</span>
+      </div>
+      <div class="session-stats">
+        <div class="session-stat">
+          <span class="num" id="stat-fired">0</span>
+          <span class="lbl">Pivots fired</span>
+        </div>
+        <div class="session-stat">
+          <span class="num" id="stat-targets">0</span>
+          <span class="lbl">Unique archives</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="session-card">
+      <div class="session-head">
+        <span>Activity log</span>
+        <span class="count" id="log-count">0 entries</span>
+      </div>
+      <div class="log-list" id="log-list" aria-live="polite" aria-relevant="additions">
+        <div class="log-empty">No pivots fired yet.<br>Snapshots will record their<br>Memento-Datetime here.</div>
+      </div>
+      <div class="session-actions">
+        <button class="btn-mini" onclick="exportCSV()" id="btn-csv" disabled>Export CSV</button>
+        <button class="btn-mini" onclick="exportMarkdown()" id="btn-md" disabled>Export MD</button>
+        <button class="btn-mini" onclick="window.print()" id="btn-print">Print PDF</button>
+        <button class="btn-mini" onclick="clearSession()" id="btn-clear-session" disabled>Clear log</button>
+      </div>
+    </div>
+
+    <div class="citation-card">
+      <div class="citation-label">Citation note</div>
+      <div class="citation-body" id="citation-body">
+        <span class="key">tool:</span> <span class="val">SIG-ARC-001 v0.1.1</span><br>
+        <span class="key">session:</span> <span class="val" id="cit-session">awaiting</span><br>
+        <span class="key">started:</span> <span class="val" id="cit-started">awaiting</span><br>
+        <span class="key">target:</span> <span class="val" id="cit-target">—</span><br>
+        <span class="key">sha256:</span> <span class="val" id="cit-hash">—</span><br>
+        <span class="key">pivots:</span> <span class="val" id="cit-pivots">0</span>
+      </div>
+    </div>
+
+    <div class="kbd-card">
+      <div class="kbd-list">
+        <div><span class="key">/</span> Focus search</div>
+        <div><span class="key">↓</span> <span class="key">↑</span> Move between rows</div>
+        <div><span class="key">Space</span> Toggle selection</div>
+        <div><span class="key">↵</span> Open archive</div>
+        <div><span class="key">Esc</span> Clear keyboard focus</div>
+      </div>
+    </div>
+  </aside>
+
+</div>
+
+<!-- Print-only block (only renders for Cmd/Ctrl+P) -->
+<section class="print-only" id="print-block">
+  <h2>Archive Trail · Investigation report</h2>
+  <div class="meta-row"><span class="k">Tool</span><span>SIG-ARC-001 v0.1.1</span></div>
+  <div class="meta-row"><span class="k">Session</span><span id="print-session">—</span></div>
+  <div class="meta-row"><span class="k">Started</span><span id="print-started">—</span></div>
+  <div class="meta-row"><span class="k">Target URL (raw)</span><span id="print-target-raw">—</span></div>
+  <div class="meta-row"><span class="k">Target URL (normalised)</span><span id="print-target">—</span></div>
+  <div class="meta-row"><span class="k">SHA-256 (URL)</span><span id="print-hash">—</span></div>
+  <div class="meta-row"><span class="k">Live status</span><span id="print-live">—</span></div>
+  <div class="meta-row"><span class="k">Pivots fired</span><span id="print-pivots">0</span></div>
+  <div class="meta-row"><span class="k">Standard</span><span>LST-001 v1.0.3 · SIG-STD-002 v2.0</span></div>
+  <table id="print-log-table" style="display: none;">
+    <thead>
+      <tr><th>UTC</th><th>Action</th><th>Archive</th><th>Memento-Datetime</th><th>URL</th></tr>
+    </thead>
+    <tbody id="print-log-rows"></tbody>
+  </table>
+</section>
+
+<!-- Footer -->
+<footer class="site">
+  <div class="wrap row">
+    <span class="accent">[ S&S / OPS ]</span>
+    <span class="sep">·</span>
+    <span>SIG-ARC-001 v0.1.1</span>
+    <span class="sep">·</span>
+    <span>LST-001 v1.0.3</span>
+    <span class="sep">·</span>
+    <span>Set in Geist and JetBrains Mono</span>
+    <span class="sep">·</span>
+    <span>© 2026 Signal &amp; Shadow</span>
+  </div>
+</footer>
+
+<!-- Toast -->
+<div id="toast" class="toast" role="status" aria-live="polite">Pivot fired</div>
+
+<script>
+  'use strict';
+
+  // ============================================================
+  // Archive Trail · SIG-ARC-001 v0.1
+  // Production-grade hardened build.
+  // ============================================================
+
+  // ---------- TARGET DEFINITIONS ----------
+  // Each target lists the archive metadata. URL builders are isolated so they
+  // can be swapped after the verification checklist comes back from the field.
+  const TARGETS = [
+    { id: 'archive-org', name: 'Wayback Machine', domain: 'web.archive.org',
+      intent: 'recover', accepts: ['url', 'domain', 'handle'],
+      build: (q, type) => type === 'handle'
+        ? `https://web.archive.org/web/*/twitter.com/${q.replace(/^@/, '')}`
+        : `https://web.archive.org/web/*/${q}`,
+      note: 'The default. Largest crawl coverage. Start here for any URL or domain.',
+      region: 'Global', tag: { label: 'Default', kind: 'primary' },
+      memento: 'web.archive.org', cdx: true },
+    { id: 'archive-is', name: 'Archive.today', domain: 'archive.is',
+      intent: 'recover', accepts: ['url', 'domain', 'handle'],
+      build: (q, type) => type === 'handle'
+        ? `https://archive.is/https://twitter.com/${q.replace(/^@/, '')}`
+        : `https://archive.is/${q}`,
+      note: 'On-demand snapshots. Best when Wayback has gaps. Often catches paywalled and JS-heavy pages.',
+      region: 'Global', memento: 'archive.today' },
+    { id: 'webcitation', name: 'WebCitation', domain: 'webcitation.org',
+      intent: 'recover', accepts: ['url'],
+      build: (q) => `https://www.webcitation.org/query?url=${encodeURIComponent(q)}`,
+      note: 'Older academic-citation archive. Deprecated for new captures, but legacy snapshots remain.',
+      region: 'Global', tag: { label: 'Legacy', kind: 'warn' } },
+    { id: 'wikiwix', name: 'Wikiwix Archive', domain: 'archive.wikiwix.com',
+      intent: 'recover', accepts: ['url'],
+      build: (q) => `https://archive.wikiwix.com/cache/?url=${encodeURIComponent(q)}`,
+      note: 'French-origin archive. Strong on Wikipedia citation snapshots.',
+      region: 'Global' },
+    { id: 'ghostarchive', name: 'Ghostarchive', domain: 'ghostarchive.org',
+      intent: 'recover', accepts: ['url', 'handle'],
+      build: (q) => `https://ghostarchive.org/search?term=${encodeURIComponent(q)}`,
+      note: 'Specialises in social media and video archiving. Useful for YouTube, X, TikTok.',
+      region: 'Global', tag: { label: 'Social', kind: 'primary' } },
+
+    { id: 'yandex-cache', name: 'Yandex cache', domain: 'yandex.com',
+      intent: 'compare', accepts: ['url', 'domain'],
+      build: (q) => `https://yandex.com/search/?text=${encodeURIComponent('url:' + q)}`,
+      note: 'Yandex retains caches longer than Google. Useful for Russia/CIS-region content.',
+      region: 'RU', tag: { label: 'CIS', kind: 'region' },
+      tldPin: ['.ru', '.by', '.kz', '.ua'], cyrillicPin: true },
+    { id: 'bing-cache', name: 'Bing cache', domain: 'bing.com',
+      intent: 'compare', accepts: ['url', 'domain'],
+      build: (q) => `https://www.bing.com/search?q=${encodeURIComponent('url:' + q)}`,
+      note: 'Microsoft cache. Smaller than Google was, but still pulls some recent snapshots.',
+      region: 'Global' },
+    { id: 'baidu-cache', name: 'Baidu cache', domain: 'baidu.com',
+      intent: 'compare', accepts: ['url', 'domain'],
+      build: (q) => `https://www.baidu.com/s?wd=${encodeURIComponent(q)}`,
+      note: 'Primary cache for Chinese-language content. Required for any .cn investigation.',
+      region: 'CN', tag: { label: 'CN', kind: 'region' }, tldPin: ['.cn'] },
+    { id: 'naver-cache', name: 'Naver cache', domain: 'naver.com',
+      intent: 'compare', accepts: ['url', 'domain'],
+      build: (q) => `https://search.naver.com/search.naver?query=${encodeURIComponent(q)}`,
+      note: 'Korean search engine. Required for .kr and Korean-language sources.',
+      region: 'KR', tag: { label: 'KR', kind: 'region' }, tldPin: ['.kr'] },
+    { id: 'sogou', name: 'Sogou', domain: 'sogou.com',
+      intent: 'compare', accepts: ['url', 'domain'],
+      build: (q) => `https://www.sogou.com/web?query=${encodeURIComponent(q)}`,
+      note: 'Chinese search engine. Cache windows shorter than Baidu but sometimes carries different snapshots.',
+      region: 'CN', tag: { label: 'CN', kind: 'region' }, tldPin: ['.cn'] },
+    { id: 'mailru', name: 'Mail.ru', domain: 'mail.ru',
+      intent: 'compare', accepts: ['url', 'domain'],
+      build: (q) => `https://go.mail.ru/search?q=${encodeURIComponent(q)}`,
+      note: 'Russian portal search. Worth pairing with Yandex for Russia/CIS coverage.',
+      region: 'RU', tag: { label: 'CIS', kind: 'region' }, tldPin: ['.ru', '.by'], cyrillicPin: true },
+    { id: 'megalodon', name: 'Megalodon', domain: 'megalodon.jp',
+      intent: 'compare', accepts: ['url', 'domain'],
+      build: (q) => `https://megalodon.jp/?url=${encodeURIComponent(q)}`,
+      note: 'Japanese on-demand archive. Strong for .jp and Japanese-language sources.',
+      region: 'JP', tag: { label: 'JP', kind: 'region' }, tldPin: ['.jp'] },
+
+    { id: 'arquivo-pt', name: 'Arquivo.pt', domain: 'arquivo.pt',
+      intent: 'regional', accepts: ['url', 'domain'],
+      build: (q) => `https://arquivo.pt/wayback/*/${q}`,
+      note: 'Portuguese national archive. Strongest coverage for .pt domains. Crawls back to 1996.',
+      region: 'PT', memento: 'arquivo.pt', tldPin: ['.pt'] },
+    { id: 'loc-archive', name: 'Library of Congress', domain: 'webarchive.loc.gov',
+      intent: 'regional', accepts: ['url', 'domain'],
+      build: (q) => `https://webarchive.loc.gov/all/*/${q}`,
+      note: 'Curated US government and political-event archives. Selective but thorough on covered topics.',
+      region: 'US', memento: 'webarchive.loc.gov', tldPin: ['.gov'] },
+    { id: 'archive-it', name: 'Archive-It', domain: 'archive-it.org',
+      intent: 'regional', accepts: ['url', 'domain'],
+      build: (q) => `https://archive-it.org/find?q=${encodeURIComponent(q)}`,
+      note: 'Curated collections from libraries, museums, and NGOs. Search by URL or topic.',
+      region: 'Global' },
+    { id: 'stanford', name: 'Stanford Web Archive', domain: 'swap.stanford.edu',
+      intent: 'regional', accepts: ['url', 'domain'],
+      build: (q) => `https://swap.stanford.edu/search?query=${encodeURIComponent(q)}`,
+      note: 'Stanford collections. Heavily focused on government, political, and academic sources.',
+      region: 'US', memento: 'swap.stanford.edu' },
+    { id: 'versafn', name: 'Versafn.is', domain: 'versafn.is',
+      intent: 'regional', accepts: ['url', 'domain'],
+      build: (q) => `https://www.versafn.is/?q=${encodeURIComponent(q)}`,
+      note: 'Icelandic web archive. Required for .is domains.',
+      region: 'IS', memento: 'vefsafn.is', tldPin: ['.is'] },
+    { id: 'croatian', name: 'Croatian Web Archive', domain: 'haw.nsk.hr',
+      intent: 'regional', accepts: ['url', 'domain'],
+      build: (q) => `https://haw.nsk.hr/en/search/?query=${encodeURIComponent(q)}`,
+      note: 'Croatian national archive. Only crawls .hr domains. Pair with Slovenian for ex-Yu coverage.',
+      region: 'HR', tag: { label: '.hr only', kind: 'warn' }, tldPin: ['.hr'] },
+    { id: 'slovenian', name: 'Slovenian Web Archive', domain: 'arhiv.nuk.uni-lj.si',
+      intent: 'regional', accepts: ['url', 'domain'],
+      build: (q) => `https://arhiv.nuk.uni-lj.si/search?query=${encodeURIComponent(q)}`,
+      note: 'Slovenian national library archive. Strong for .si domains.',
+      region: 'SI', tldPin: ['.si'] },
+    { id: 'uk-archive', name: 'UK Web Archive', domain: 'webarchive.org.uk',
+      intent: 'regional', accepts: ['url', 'domain'],
+      build: (q) => `https://www.webarchive.org.uk/wayback/archive/*/${q}`,
+      note: 'British Library archive. Comprehensive for .uk domains since 2013 legal deposit.',
+      region: 'UK', memento: 'webarchive.org.uk', tldPin: ['.uk'] },
+    { id: 'singapore', name: 'Singapore Web Archive', domain: 'eresources.nlb.gov.sg',
+      intent: 'regional', accepts: ['url', 'domain'],
+      build: (q) => `https://eresources.nlb.gov.sg/webarchives/Search?q=${encodeURIComponent(q)}`,
+      note: 'NLB Singapore. Focused on .sg and Singapore-relevant content.',
+      region: 'SG', tldPin: ['.sg'] },
+    { id: 'trove', name: 'Trove', domain: 'trove.nla.gov.au',
+      intent: 'regional', accepts: ['url', 'domain'],
+      build: (q) => `https://webarchive.nla.gov.au/awa/*/${q}`,
+      note: 'Australian national archive. Includes deep newspaper backfile alongside web crawls.',
+      region: 'AU', memento: 'webarchive.nla.gov.au', tldPin: ['.au'] },
+    { id: 'unhcr', name: 'UNHCR Web Archive', domain: 'webarchive.archive.unhcr.org',
+      intent: 'regional', accepts: ['url', 'domain'],
+      build: (q) => `https://webarchive.archive.unhcr.org/*/${q}`,
+      note: 'UN Refugee Agency archive. Refugee-related government and NGO sources.',
+      region: 'Global' },
+    { id: 'estonian', name: 'Estonian Web Archive', domain: 'veebiarhiiv.digar.ee',
+      intent: 'regional', accepts: ['url', 'domain'],
+      build: (q) => `https://veebiarhiiv.digar.ee/search?query=${encodeURIComponent(q)}`,
+      note: 'Estonian national library archive. Strong for .ee domains.',
+      region: 'EE', tldPin: ['.ee'] },
+    { id: 'proni', name: 'PRONI Web Archive', domain: 'webarchive.proni.gov.uk',
+      intent: 'regional', accepts: ['url', 'domain'],
+      build: (q) => `https://webarchive.proni.gov.uk/search?q=${encodeURIComponent(q)}`,
+      note: 'Public Record Office of Northern Ireland. Covers NI government and political sources.',
+      region: 'UK', tldPin: ['.uk'] },
+    { id: 'unesco', name: 'UNESCO Web Archive', domain: 'webarchive.unesco.org',
+      intent: 'regional', accepts: ['url', 'domain'],
+      build: (q) => `https://webarchive.unesco.org/search?q=${encodeURIComponent(q)}`,
+      note: 'UNESCO institutional and partner-organisation captures.',
+      region: 'Global' },
+    { id: 'eot', name: 'End of Term Archive', domain: 'eotarchive.org',
+      intent: 'regional', accepts: ['url', 'domain'],
+      build: (q) => `https://eotarchive.org/search?q=${encodeURIComponent(q)}`,
+      note: 'US federal sites at the end of each presidential term. Critical for vanished .gov pages.',
+      region: 'US', tag: { label: '.gov', kind: 'primary' }, tldPin: ['.gov'] },
+    { id: 'czech', name: 'Czech Web Archive', domain: 'webarchiv.cz',
+      intent: 'regional', accepts: ['url', 'domain'],
+      build: (q) => `https://www.webarchiv.cz/en/search?query=${encodeURIComponent(q)}`,
+      note: 'Czech national library archive. Strong for .cz domains.',
+      region: 'CZ', tldPin: ['.cz'] },
+    { id: 'finnish', name: 'Finnish Web Archive', domain: 'kansalliskirjasto.fi',
+      intent: 'regional', accepts: ['url', 'domain'],
+      build: (q) => `https://www.kansalliskirjasto.fi/en/search?q=${encodeURIComponent(q)}`,
+      note: 'National Library of Finland. Required for .fi domains.',
+      region: 'FI', tldPin: ['.fi'] },
+    { id: 'eu-exit', name: 'EU Exit Archive', domain: 'webarchive.nationalarchives.gov.uk',
+      intent: 'regional', accepts: ['url', 'domain'],
+      build: (q) => `https://webarchive.nationalarchives.gov.uk/ukgwa/*/${q}`,
+      note: 'UK Government Web Archive. Brexit-era and ongoing UK gov captures.',
+      region: 'UK', tag: { label: '.gov.uk', kind: 'primary' }, tldPin: ['.gov.uk', '.uk'] },
+    { id: 'padicat', name: 'PADICAT', domain: 'padicat.cat',
+      intent: 'regional', accepts: ['url', 'domain'],
+      build: (q) => `https://www.padicat.cat/en/search?q=${encodeURIComponent(q)}`,
+      note: 'Web Archive of Catalonia. Catalan-language and .cat domain coverage.',
+      region: 'ES', tldPin: ['.cat', '.es'] }
+  ];
+
+  const INTENT_GROUPS = {
+    recover: { label: 'Recover · 01', name: 'Recover deleted or moved content' },
+    compare: { label: 'Compare · 02', name: 'Search engine caches' },
+    regional: { label: 'Regional · 03', name: 'National and institutional archives' }
+  };
+
+  // ---------- STATE ----------
+  const sessionId = 'SES-' + Math.random().toString(36).slice(2, 8).toUpperCase();
+  const sessionStart = new Date();
+  let rawInput = '';
+  let normalisedInput = '';
+  let currentEntity = null;
+  let currentHash = null;
+  let liveStatus = null;
+  let mementoCounts = {};       // archiveKey -> { count, first, last }
+  let waybackDetail = null;     // { count, first, last, lastStatus, capped }
+  let selected = new Set();
+  let log = [];
+  let firedTargets = new Map();
+  let inputDebounce = null;
+  let verifyAbort = null;
+  const cache = {};             // normalisedURL -> { live, memento, wayback, ts }
+  let kbFocusIdx = -1;          // keyboard-focused row index
+  let renderedRows = [];        // ordered list of compatible-row ids for kb nav
+
+  document.getElementById('session-id').textContent = sessionId;
+  document.getElementById('cit-session').textContent = sessionId;
+  document.getElementById('cit-started').textContent = sessionStart.toISOString().slice(0, 16).replace('T', ' ') + 'Z';
+
+  // ---------- URL NORMALISATION ----------
+  // Lowercase host, strip trailing slash on root paths, default to https for
+  // domain-only inputs. Preserves the raw input separately for the audit trail.
+  function normaliseURL(input) {
+    const v = (input || '').trim();
+    if (!v) return '';
+    if (/^https?:\/\//i.test(v)) {
+      try {
+        const u = new URL(v);
+        u.hostname = u.hostname.toLowerCase();
+        // Strip trailing slash only on root paths, preserve everywhere else
+        let s = u.toString();
+        if (u.pathname === '/' && !v.endsWith('/')) s = s.replace(/\/$/, '');
+        return s;
+      } catch { return v; }
+    }
+    // Bare domain: add https://
+    if (/^[\w-]+(\.[\w-]+)+(\/.*)?$/.test(v) && !v.includes(' ')) {
+      try {
+        const u = new URL('https://' + v);
+        u.hostname = u.hostname.toLowerCase();
+        let s = u.toString();
+        if (u.pathname === '/' && !v.includes('/')) s = s.replace(/\/$/, '');
+        return s;
+      } catch { return 'https://' + v.toLowerCase(); }
+    }
+    return v;
+  }
+
+  // ---------- ENTITY DETECTION ----------
+  function detectEntity(rawValue, normalisedValue) {
+    if (!rawValue.trim()) return { type: null, label: 'Awaiting input', normalised: '', tld: null };
+    const raw = rawValue.trim();
+
+    // Handle (most specific, check first)
+    if (/^@[\w]+$/.test(raw) || /^twitter\.com\//i.test(raw) || /^x\.com\//i.test(raw)) {
+      const handle = raw.replace(/^(twitter\.com|x\.com)\//i, '@').replace(/^@?/, '@');
+      return { type: 'handle', label: 'Handle · ' + handle, normalised: handle, tld: null };
+    }
+
+    // URL or domain (use the normalised form)
+    if (/^https?:\/\//i.test(normalisedValue)) {
+      try {
+        const u = new URL(normalisedValue);
+        const parts = u.hostname.split('.');
+        const tld = '.' + parts[parts.length - 1];
+        const tld2 = parts.length > 1 ? '.' + parts.slice(-2).join('.') : tld;
+        const isJustDomain = u.pathname === '/' || u.pathname === '';
+        return {
+          type: isJustDomain ? 'domain' : 'url',
+          label: (isJustDomain ? 'Domain · ' : 'URL · ') + u.hostname,
+          normalised: normalisedValue,
+          hostname: u.hostname,
+          tld, tld2
+        };
+      } catch {
+        return { type: 'url', label: 'URL (malformed)', normalised: normalisedValue, tld: null };
+      }
+    }
+
+    return { type: 'keyword', label: 'Keyword search', normalised: raw, tld: null };
+  }
+
+  // ---------- SHA-256 ----------
+  async function sha256(str) {
+    try {
+      const buf = new TextEncoder().encode(str);
+      const hash = await crypto.subtle.digest('SHA-256', buf);
+      return Array.from(new Uint8Array(hash)).map(b => b.toString(16).padStart(2, '0')).join('');
+    } catch (e) {
+      console.error('SHA-256 failed:', e);
+      return null;
+    }
+  }
+
+  // ---------- LIVE STATUS (HEAD with timeout) ----------
+  // CORS-blocked for most origins. We treat any failure as "Unknown" rather than
+  // false-negative "dead." Honest by default.
+  async function checkLive(url, signal) {
+    const timeoutCtl = new AbortController();
+    const timeoutId = setTimeout(() => timeoutCtl.abort(), 8000);
+    const combined = anySignal([signal, timeoutCtl.signal]);
+    try {
+      const r = await fetch(url, { method: 'HEAD', mode: 'cors', redirect: 'manual', signal: combined });
+      if (r.type === 'opaqueredirect') return { code: 'redirect', ok: false, label: 'Redirect (opaque)' };
+      return { code: r.status, ok: r.ok, label: `${r.status}${r.ok ? ' OK' : ''}`.trim() };
+    } catch (e) {
+      if (e.name === 'AbortError' && signal && signal.aborted) throw e;
+      return { code: null, ok: null, label: 'Unknown (CORS)' };
+    } finally {
+      clearTimeout(timeoutId);
+    }
+  }
+
+  // ---------- MEMENTO FEDERATED ----------
+  // Defensively parse three response shapes the aggregator returns. The shape
+  // varies depending on whether the URL has any captures and which archives
+  // returned data within the timeout window.
+  async function checkMemento(url, signal) {
+    const timeoutCtl = new AbortController();
+    const timeoutId = setTimeout(() => timeoutCtl.abort(), 12000);
+    const combined = anySignal([signal, timeoutCtl.signal]);
+    try {
+      const apiUrl = 'https://timetravel.mementoweb.org/api/json/19950101000000/' + encodeURIComponent(url);
+      const r = await fetch(apiUrl, { signal: combined });
+      if (!r.ok) return { ok: false, error: `Memento returned ${r.status}`, counts: {} };
+      const j = await r.json();
+      const counts = {};
+
+      const recordHit = (mementoUri, datetime) => {
+        if (!mementoUri || !datetime) return;
+        let host;
+        try { host = new URL(mementoUri).hostname; } catch { return; }
+        const matchingTarget = TARGETS.find(t => t.memento && (host === t.memento || host.endsWith('.' + t.memento) || host.endsWith(t.memento)));
+        if (!matchingTarget) return;
+        const key = matchingTarget.memento;
+        if (!counts[key]) counts[key] = { count: 0, first: datetime, last: datetime };
+        counts[key].count++;
+        if (datetime < counts[key].first) counts[key].first = datetime;
+        if (datetime > counts[key].last) counts[key].last = datetime;
+      };
+
+      // Shape 1: { mementos: { list: [{ datetime, uri }, ...] } }
+      if (j.mementos && Array.isArray(j.mementos.list)) {
+        for (const m of j.mementos.list) recordHit(m.uri, m.datetime);
+      }
+      // Shape 2: { mementos: { first, last, closest, prev, next } } (single-archive response)
+      if (j.mementos && !Array.isArray(j.mementos.list) && typeof j.mementos === 'object') {
+        for (const k of ['first', 'last', 'closest', 'prev', 'next']) {
+          const m = j.mementos[k];
+          if (m && m.uri) recordHit(m.uri, m.datetime);
+        }
+      }
+      // Shape 3: { timemap_index: [...] } (rare, points to per-archive timemaps)
+      if (Array.isArray(j.timemap_index)) {
+        for (const tm of j.timemap_index) {
+          if (tm && tm.uri) {
+            try {
+              const host = new URL(tm.uri).hostname;
+              const matchingTarget = TARGETS.find(t => t.memento && (host === t.memento || host.endsWith('.' + t.memento)));
+              if (matchingTarget && !counts[matchingTarget.memento]) {
+                // Mark presence even without count detail
+                counts[matchingTarget.memento] = { count: 1, first: null, last: null, presenceOnly: true };
+              }
+            } catch {}
+          }
+        }
+      }
+      return { ok: true, counts };
+    } catch (e) {
+      if (e.name === 'AbortError' && signal && signal.aborted) throw e;
+      return { ok: false, error: e.name === 'AbortError' ? 'Timed out' : 'Network error', counts: {} };
+    } finally {
+      clearTimeout(timeoutId);
+    }
+  }
+
+  // ---------- WAYBACK CDX (with paging awareness) ----------
+  // CDX caps at 10,000 rows by default. We request 10,001 to detect overflow,
+  // then report "10,000+" honestly rather than rounding down silently.
+  async function checkWaybackCDX(url, signal) {
+    const timeoutCtl = new AbortController();
+    const timeoutId = setTimeout(() => timeoutCtl.abort(), 12000);
+    const combined = anySignal([signal, timeoutCtl.signal]);
+    const LIMIT = 10001;
+    try {
+      const cdx = `https://web.archive.org/cdx/search/cdx?url=${encodeURIComponent(url)}&output=json&limit=${LIMIT}&fl=timestamp,statuscode`;
+      const r = await fetch(cdx, { signal: combined });
+      if (!r.ok) return { ok: false, error: `CDX returned ${r.status}` };
+      const j = await r.json();
+      if (!Array.isArray(j) || j.length < 2) return { ok: true, count: 0, first: null, last: null, lastStatus: null, capped: false };
+      const rows = j.slice(1);
+      const capped = rows.length >= LIMIT;
+      const reportedCount = capped ? LIMIT - 1 : rows.length;
+      const timestamps = rows.map(row => row[0]).filter(Boolean).sort();
+      const lastRow = rows[rows.length - 1];
+      const lastStatus = lastRow ? lastRow[1] : null;
+      return {
+        ok: true,
+        count: reportedCount,
+        first: timestamps[0] || null,
+        last: timestamps[timestamps.length - 1] || null,
+        lastStatus: lastStatus,
+        capped
+      };
+    } catch (e) {
+      if (e.name === 'AbortError' && signal && signal.aborted) throw e;
+      return { ok: false, error: e.name === 'AbortError' ? 'Timed out' : 'Network error' };
+    } finally {
+      clearTimeout(timeoutId);
+    }
+  }
+
+  // ---------- UTILITIES ----------
+  // Polyfill-ish: combine multiple AbortSignals into one
+  function anySignal(signals) {
+    const ctl = new AbortController();
+    for (const s of signals) {
+      if (!s) continue;
+      if (s.aborted) { ctl.abort(); break; }
+      s.addEventListener('abort', () => ctl.abort(), { once: true });
+    }
+    return ctl.signal;
+  }
+
+  function escapeHTML(s) {
+    return String(s == null ? '' : s)
+      .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+  }
+
+  function formatYear(ts) {
+    if (!ts) return '';
+    if (/^\d{14}$/.test(ts)) return ts.slice(0, 4);
+    try { return new Date(ts).getFullYear().toString(); } catch { return ''; }
+  }
+  function formatYearRange(first, last) {
+    const f = formatYear(first), l = formatYear(last);
+    if (!f) return '';
+    if (f === l) return f;
+    return `${f}–${l}`;
+  }
+  function formatMementoDatetime(ts) {
+    if (!ts) return null;
+    if (/^\d{14}$/.test(ts)) {
+      return `${ts.slice(0,4)}-${ts.slice(4,6)}-${ts.slice(6,8)}T${ts.slice(8,10)}:${ts.slice(10,12)}:${ts.slice(12,14)}Z`;
+    }
+    return ts;
+  }
+  function formatCountDisplay(n, capped) {
+    if (capped) return '10,000+';
+    return n.toLocaleString();
+  }
+
+  // ---------- TLD PINNING ----------
+  function isPinned(target, entity) {
+    if (!target.tldPin || !entity.tld || !entity.hostname) return false;
+    return target.tldPin.some(p =>
+      entity.tld === p ||
+      entity.tld2 === p ||
+      entity.hostname.endsWith(p)
+    );
+  }
+  function isCyrillic(input) {
+    return /[\u0400-\u04FF]/.test(input);
+  }
+
+  // ---------- RENDERING ----------
+  function renderTargets() {
+    const empty = document.getElementById('empty-state');
+    const results = document.getElementById('results');
+
+    if (!currentEntity || !currentEntity.type) {
+      empty.style.display = 'block';
+      results.style.display = 'none';
+      renderedRows = [];
+      return;
+    }
+
+    empty.style.display = 'none';
+    results.style.display = 'block';
+
+    const byIntent = { recover: [], compare: [], regional: [] };
+    const cyrillic = isCyrillic(rawInput);
+
+    for (const t of TARGETS) {
+      const compatible = t.accepts.includes(currentEntity.type);
+      const pinned = compatible && (isPinned(t, currentEntity) || (cyrillic && t.cyrillicPin));
+      byIntent[t.intent].push({ ...t, compatible, pinned });
+    }
+    for (const k of Object.keys(byIntent)) {
+      byIntent[k].sort((a, b) => (b.pinned ? 1 : 0) - (a.pinned ? 1 : 0));
+    }
+
+    let html = '';
+    renderedRows = [];
+    for (const [intentId, group] of Object.entries(INTENT_GROUPS)) {
+      const items = byIntent[intentId] || [];
+      if (items.length === 0) continue;
+      const compatInGroup = items.filter(t => t.compatible).length;
+
+      html += `
+        <section class="intent-group" aria-labelledby="intent-${intentId}-h">
+          <div class="intent-head">
+            <span class="intent-tag">${group.label}</span>
+            <h2 id="intent-${intentId}-h">${group.name}</h2>
+            <span class="intent-meta"><span class="v">${compatInGroup}</span> of ${items.length} compatible</span>
+          </div>
+          <div class="targets" role="list">
+            ${items.map(t => {
+              if (t.compatible) renderedRows.push(t.id);
+              return renderTarget(t);
+            }).join('')}
+          </div>
+        </section>
+      `;
+    }
+
+    results.innerHTML = html;
+
+    results.querySelectorAll('input[type="checkbox"]').forEach(cb => {
+      cb.addEventListener('change', e => {
+        if (e.target.checked) selected.add(e.target.dataset.id);
+        else selected.delete(e.target.dataset.id);
+        updateActionBar();
+      });
+    });
+    results.querySelectorAll('.target-fire').forEach(btn => {
+      btn.addEventListener('click', () => fireTarget(btn.dataset.id));
+    });
+
+    applyKbFocus();
+  }
+
+  function renderTarget(t) {
+    const dimmed = t.compatible ? '' : 'dimmed';
+    const pinned = t.pinned ? 'pinned' : '';
+    const isChecked = selected.has(t.id);
+    const fired = firedTargets.has(t.id);
+
+    let tagHtml = '';
+    if (t.pinned) {
+      tagHtml += `<span class="target-tag pin">Pinned · ${escapeHTML(currentEntity.tld || 'region')}</span>`;
+    }
+    if (t.tag) {
+      const cls = t.tag.kind === 'warn' ? 'warn' : t.tag.kind === 'region' ? 'region' : '';
+      tagHtml += `<span class="target-tag ${cls}">${escapeHTML(t.tag.label)}</span>`;
+    }
+
+    const discoveryHtml = renderDiscovery(t);
+    const ariaLabel = `${t.name}, ${t.compatible ? 'compatible' : 'not applicable for this entity type'}${t.pinned ? ', pinned for region' : ''}`;
+
+    return `
+      <div class="target ${dimmed} ${pinned}" role="listitem" data-row-id="${t.id}" aria-label="${escapeHTML(ariaLabel)}">
+        <div class="target-check">
+          <input type="checkbox" data-id="${t.id}" ${isChecked ? 'checked' : ''} ${!t.compatible ? 'disabled' : ''} aria-label="Select ${escapeHTML(t.name)}">
+        </div>
+        <div class="target-main">
+          <div class="target-name-row">
+            <span class="target-name">${escapeHTML(t.name)}</span>
+            <span class="target-domain">${escapeHTML(t.domain)}</span>
+            ${tagHtml}
+          </div>
+          <div class="target-note">${escapeHTML(t.note)}</div>
+        </div>
+        <div class="target-discovery" aria-label="Discovery status">${discoveryHtml}</div>
+        <button class="target-fire ${fired ? 'fired' : ''}" data-id="${t.id}" ${!t.compatible ? 'disabled' : ''} aria-label="${fired ? 'Re-open' : 'Open'} ${escapeHTML(t.name)} in new tab">
+          ${fired ? 'Fired ↗' : 'Open ↗'}
+        </button>
+      </div>
+    `;
+  }
+
+  function renderDiscovery(t) {
+    if (!t.compatible) {
+      return `<div class="discovery-line none"><span class="marker" aria-hidden="true">—</span><span class="sr-only">Not applicable. </span>Not applicable</div>`;
+    }
+    // Wayback gets richer detail from CDX
+    if (t.id === 'archive-org') {
+      if (waybackDetail === null) {
+        return `<div class="discovery-line checking"><span class="marker" aria-hidden="true"><span class="spinner"></span></span><span class="sr-only">Checking. </span>Checking…</div>`;
+      }
+      if (waybackDetail.ok === false) {
+        return `<div class="discovery-line error"><span class="marker" aria-hidden="true">!</span><span class="sr-only">Error. </span>Check failed</div><div class="discovery-detail">${escapeHTML(waybackDetail.error || 'Retry available')}</div>`;
+      }
+      if (waybackDetail.count > 0) {
+        const liveBit = waybackDetail.lastStatus
+          ? ` · last capture ${waybackDetail.lastStatus}`
+          : '';
+        return `
+          <div class="discovery-line ok"><span class="marker" aria-hidden="true">✓</span><span class="sr-only">Found. </span><span class="discovery-count">${formatCountDisplay(waybackDetail.count, waybackDetail.capped)}</span> captures</div>
+          <div class="discovery-detail">${formatYearRange(waybackDetail.first, waybackDetail.last)}${liveBit}</div>
+        `;
+      }
+      return `<div class="discovery-line none"><span class="marker" aria-hidden="true">○</span><span class="sr-only">No snapshots. </span>No captures</div>`;
+    }
+    // Memento-covered archives
+    if (t.memento) {
+      if (mementoCounts === null) {
+        return `<div class="discovery-line checking"><span class="marker" aria-hidden="true"><span class="spinner"></span></span><span class="sr-only">Checking. </span>Checking…</div>`;
+      }
+      const m = mementoCounts[t.memento];
+      if (m && m.count > 0) {
+        if (m.presenceOnly) {
+          return `<div class="discovery-line ok"><span class="marker" aria-hidden="true">✓</span><span class="sr-only">Found. </span>Snapshots present</div><div class="discovery-detail">Count not reported</div>`;
+        }
+        const range = formatYearRange(m.first, m.last);
+        return `
+          <div class="discovery-line ok"><span class="marker" aria-hidden="true">✓</span><span class="sr-only">Found. </span><span class="discovery-count">${m.count.toLocaleString()}</span> ${m.count === 1 ? 'capture' : 'captures'}</div>
+          ${range ? `<div class="discovery-detail">${range}</div>` : ''}
+        `;
+      }
+      return `<div class="discovery-line none"><span class="marker" aria-hidden="true">○</span><span class="sr-only">No snapshots. </span>No snapshots found</div>`;
+    }
+    // Manual-check rows
+    return `<div class="discovery-line manual"><span class="marker" aria-hidden="true">●</span><span class="sr-only">Manual check required. </span>Manual check</div><div class="discovery-detail">No federated API</div>`;
+  }
+
+  function applyKbFocus() {
+    document.querySelectorAll('.target.kb-focus').forEach(el => el.classList.remove('kb-focus'));
+    if (kbFocusIdx >= 0 && kbFocusIdx < renderedRows.length) {
+      const row = document.querySelector(`.target[data-row-id="${renderedRows[kbFocusIdx]}"]`);
+      if (row) {
+        row.classList.add('kb-focus');
+        row.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+      }
+    }
+  }
+
+  function updateActionBar() {
+    const found = countConfirmedSnapshots();
+    document.getElementById('selected-count').textContent = selected.size;
+    document.getElementById('fired-count').textContent = log.filter(e => e.action === 'fire').length;
+    document.getElementById('found-count').textContent = found;
+    document.getElementById('btn-batch').disabled = selected.size === 0;
+    document.getElementById('btn-copy').disabled = selected.size === 0;
+    document.getElementById('btn-found').disabled = found === 0;
+    document.getElementById('btn-all').disabled = !currentEntity || !currentEntity.type;
+  }
+
+  function countConfirmedSnapshots() {
+    if (!currentEntity || !currentEntity.type) return 0;
+    let n = 0;
+    for (const t of TARGETS) {
+      if (!t.accepts.includes(currentEntity.type)) continue;
+      if (t.id === 'archive-org' && waybackDetail && waybackDetail.ok && waybackDetail.count > 0) n++;
+      else if (t.memento && mementoCounts && mementoCounts[t.memento] && mementoCounts[t.memento].count > 0) n++;
+    }
+    return n;
+  }
+
+  function updateSession() {
+    const fired = log.filter(e => e.action === 'fire').length;
+    const uniqueTargets = new Set(log.filter(e => e.action === 'fire').map(e => e.target)).size;
+    document.getElementById('stat-fired').textContent = fired;
+    document.getElementById('stat-targets').textContent = uniqueTargets;
+    document.getElementById('cit-pivots').textContent = fired;
+    document.getElementById('log-count').textContent = log.length + ' ' + (log.length === 1 ? 'entry' : 'entries');
+
+    const hasLog = log.length > 0;
+    document.getElementById('btn-csv').disabled = !hasLog;
+    document.getElementById('btn-md').disabled = !hasLog;
+    document.getElementById('btn-clear-session').disabled = !hasLog;
+
+    renderLog();
+    updateActionBar();
+  }
+
+  function renderLog() {
+    const list = document.getElementById('log-list');
+    if (log.length === 0) {
+      list.innerHTML = '<div class="log-empty">No pivots fired yet.<br>Snapshots will record their<br>Memento-Datetime here.</div>';
+      return;
+    }
+    const recent = [...log].reverse().slice(0, 50);
+    list.innerHTML = recent.map(e => {
+      const t = TARGETS.find(x => x.id === e.target);
+      const time = new Date(e.timestamp).toISOString().slice(11, 19);
+      const tgtLabel = t ? t.name : e.target;
+      const inputShort = e.input.length > 28 ? e.input.slice(0, 26) + '…' : e.input;
+      const memento = e.mementoDatetime ? `<br><span class="memento">memento ${escapeHTML(e.mementoDatetime)}</span>` : '';
+      const tooltip = `${e.timestamp} · ${tgtLabel} · ${e.input}${e.mementoDatetime ? ' · ' + e.mementoDatetime : ''}`;
+      return `
+        <div class="log-entry" title="${escapeHTML(tooltip)}">
+          <span class="when">${time}</span>
+          <span class="what"><span class="name">${escapeHTML(tgtLabel)}</span><br><span class="tgt">${escapeHTML(inputShort)}</span>${memento}</span>
+        </div>
+      `;
+    }).join('');
+  }
+
+  // ---------- DIAGNOSTICS ----------
+  function setDiag(id, html, cls) {
+    const el = document.getElementById(id);
+    el.className = 'value ' + (cls || '');
+    el.innerHTML = html;
+  }
+
+  function updateDiagnostics() {
+    if (!currentEntity || !currentEntity.type) {
+      setDiag('diag-entity', '<span class="check">Awaiting input</span>', 'muted');
+      setDiag('diag-live', '<span class="check">—</span>', 'muted');
+      setDiag('diag-hash', '—', 'muted');
+      setDiag('diag-memento', '<span class="check">—</span>', 'muted');
+      document.getElementById('normalised-row').classList.remove('show');
+      return;
+    }
+    setDiag('diag-entity', `<span class="check">${escapeHTML(currentEntity.label)}</span>`, 'ok');
+    if (currentHash) {
+      setDiag('diag-hash', currentHash.slice(0, 16) + '…', 'ok');
+    }
+    // Show normalised URL only if it differs from raw input
+    const norm = document.getElementById('normalised-row');
+    const normVal = document.getElementById('normalised-value');
+    if (normalisedInput && normalisedInput !== rawInput) {
+      norm.classList.add('show');
+      normVal.textContent = normalisedInput;
+    } else {
+      norm.classList.remove('show');
+    }
+  }
+
+  function paintDiagnostics() {
+    if (liveStatus) {
+      let cls = 'muted';
+      if (liveStatus.ok === true) cls = 'ok';
+      else if (liveStatus.code === 404 || liveStatus.code === 410) cls = 'err';
+      else if (liveStatus.code === 'redirect' || (liveStatus.code >= 300 && liveStatus.code < 400)) cls = 'warn';
+      setDiag('diag-live', `<span class="check">${escapeHTML(liveStatus.label)}</span>`, cls);
+    }
+
+    // Also surface CDX-derived "last capture status" if HEAD didn't tell us
+    if ((!liveStatus || liveStatus.label === 'Unknown (CORS)') && waybackDetail && waybackDetail.ok && waybackDetail.lastStatus) {
+      const code = parseInt(waybackDetail.lastStatus, 10);
+      let cls = 'muted', label = `Last Wayback: ${waybackDetail.lastStatus}`;
+      if (code >= 200 && code < 300) cls = 'ok';
+      else if (code === 404 || code === 410) cls = 'err';
+      else if (code >= 300 && code < 400) cls = 'warn';
+      setDiag('diag-live', `<span class="check">${escapeHTML(label)}</span>`, cls);
+    }
+
+    if (mementoCounts === null) return; // still checking
+    const mementoArchives = Object.values(mementoCounts || {}).filter(v => v && v.count > 0).length;
+    const totalCaptures = Object.values(mementoCounts || {}).reduce((s, v) => s + (v.count || 0), 0)
+      + (waybackDetail && waybackDetail.ok ? waybackDetail.count : 0);
+    const totalArchives = mementoArchives + (waybackDetail && waybackDetail.ok && waybackDetail.count > 0 ? 1 : 0);
+
+    if (totalArchives > 0) {
+      const cappedNote = waybackDetail && waybackDetail.capped ? ' (Wayback capped at 10,000)' : '';
+      setDiag('diag-memento', `<span class="check">${totalArchives} ${totalArchives === 1 ? 'archive' : 'archives'} · ${totalCaptures.toLocaleString()} captures${cappedNote}</span>`, 'ok');
+    } else if (waybackDetail && waybackDetail.ok === false) {
+      setDiag('diag-memento', `<span class="check">CDX failed</span>`, 'warn');
+    } else {
+      setDiag('diag-memento', `<span class="check">No snapshots found</span>`, 'warn');
+    }
+  }
+
+  // ---------- INPUT HANDLING ----------
+  function onInputChange() {
+    const raw = document.getElementById('target-input').value;
+    rawInput = raw.trim();
+    normalisedInput = normaliseURL(rawInput);
+    currentEntity = detectEntity(rawInput, normalisedInput);
+
+    selected.clear();
+    waybackDetail = null;
+    mementoCounts = {};
+    liveStatus = null;
+    currentHash = null;
+    kbFocusIdx = -1;
+
+    updateDiagnostics();
+    renderTargets();
+    updateActionBar();
+
+    document.getElementById('cit-target').textContent = normalisedInput || rawInput || '—';
+    document.getElementById('cit-hash').textContent = '—';
+
+    if (verifyAbort) verifyAbort.abort();
+    if (inputDebounce) clearTimeout(inputDebounce);
+
+    if (!currentEntity.type || currentEntity.type === 'keyword') return;
+
+    inputDebounce = setTimeout(() => runVerification(), 600);
+  }
+
+  async function runVerification() {
+    const inputAtStart = rawInput;
+    const entity = currentEntity;
+    if (!entity || !entity.type) return;
+
+    // Hash always (cheap, local)
+    sha256(entity.normalised).then(h => {
+      if (rawInput !== inputAtStart || !h) return;
+      currentHash = h;
+      setDiag('diag-hash', h.slice(0, 16) + '…', 'ok');
+      document.getElementById('cit-hash').textContent = h.slice(0, 24) + '…';
+    });
+
+    // Cache hit?
+    const cacheKey = entity.normalised;
+    if (cache[cacheKey]) {
+      const c = cache[cacheKey];
+      liveStatus = c.live;
+      mementoCounts = c.memento;
+      waybackDetail = c.wayback;
+      paintDiagnostics();
+      renderTargets();
+      updateActionBar();
+      return;
+    }
+
+    // For keyword/handle, skip URL-only checks
+    if (entity.type === 'keyword') {
+      setDiag('diag-live', '<span class="check">Not applicable</span>', 'muted');
+      setDiag('diag-memento', '<span class="check">Not applicable</span>', 'muted');
+      mementoCounts = {};
+      renderTargets();
+      return;
+    }
+
+    // For handles, run Wayback CDX against the constructed twitter URL only
+    if (entity.type === 'handle') {
+      setDiag('diag-live', '<span class="check">Not applicable</span>', 'muted');
+      const handle = entity.normalised.replace(/^@/, '');
+      const handleURL = `https://twitter.com/${handle}`;
+      setDiag('diag-memento', '<span class="check"><span class="spinner"></span>Querying Wayback for handle…</span>', 'muted');
+      mementoCounts = {}; // no Memento for handles, only Wayback
+      waybackDetail = null;
+      renderTargets();
+
+      verifyAbort = new AbortController();
+      const wb = await checkWaybackCDX(handleURL, verifyAbort.signal);
+      if (rawInput !== inputAtStart) return;
+      waybackDetail = wb;
+      cache[cacheKey] = { live: { code: null, label: 'N/A (handle)' }, memento: {}, wayback: wb, ts: Date.now() };
+      paintDiagnostics();
+      renderTargets();
+      updateActionBar();
+      return;
+    }
+
+    // Full URL or domain: run all three checks
+    setDiag('diag-live', '<span class="check"><span class="spinner"></span>Checking…</span>', 'muted');
+    setDiag('diag-memento', '<span class="check"><span class="spinner"></span>Querying aggregator…</span>', 'muted');
+    mementoCounts = null;
+    waybackDetail = null;
+    renderTargets();
+
+    verifyAbort = new AbortController();
+    const signal = verifyAbort.signal;
+
+    const [liveR, mementoR, waybackR] = await Promise.allSettled([
+      checkLive(entity.normalised, signal),
+      checkMemento(entity.normalised, signal),
+      checkWaybackCDX(entity.normalised, signal)
+    ]);
+
+    if (rawInput !== inputAtStart) return;
+
+    liveStatus = liveR.status === 'fulfilled' ? liveR.value : { code: null, label: 'Check failed', ok: null };
+
+    if (mementoR.status === 'fulfilled') {
+      mementoCounts = mementoR.value.ok ? mementoR.value.counts : {};
+      if (!mementoR.value.ok) console.warn('Memento aggregator:', mementoR.value.error);
+    } else {
+      mementoCounts = {};
+    }
+
+    waybackDetail = waybackR.status === 'fulfilled' ? waybackR.value : { ok: false, error: 'Network error' };
+
+    cache[cacheKey] = {
+      live: liveStatus,
+      memento: mementoCounts,
+      wayback: waybackDetail,
+      ts: Date.now()
+    };
+
+    paintDiagnostics();
+    renderTargets();
+    updateActionBar();
+  }
+
+  // ---------- ACTIONS ----------
+  function fireTarget(id) {
+    const t = TARGETS.find(x => x.id === id);
+    if (!t || !currentEntity || !t.accepts.includes(currentEntity.type)) return;
+    let url;
+    try {
+      url = t.build(currentEntity.normalised, currentEntity.type);
+    } catch (e) {
+      showToast('Could not build URL for ' + t.name, true);
+      return;
+    }
+
+    let mementoDatetime = null;
+    if (t.id === 'archive-org' && waybackDetail && waybackDetail.ok && waybackDetail.last) {
+      mementoDatetime = formatMementoDatetime(waybackDetail.last);
+    } else if (t.memento && mementoCounts && mementoCounts[t.memento] && mementoCounts[t.memento].last) {
+      mementoDatetime = formatMementoDatetime(mementoCounts[t.memento].last);
+    }
+
+    log.push({
+      timestamp: new Date().toISOString(),
+      action: 'fire',
+      target: id,
+      input: rawInput,
+      normalised: normalisedInput,
+      sha256: currentHash,
+      entity: currentEntity.type,
+      url: url,
+      mementoDatetime: mementoDatetime,
+      liveStatus: liveStatus ? liveStatus.label : null
+    });
+    firedTargets.set(id, (firedTargets.get(id) || 0) + 1);
+
+    const opened = window.open(url, '_blank', 'noopener,noreferrer');
+    if (!opened) {
+      showToast('Popup blocked. Allow popups to use batch.', true);
+    } else {
+      showToast(`Fired ${t.name}`);
+    }
+    updateSession();
+    renderTargets();
+  }
+
+  function openBatch() {
+    if (selected.size === 0) return;
+    const ids = [...selected];
+    if (ids.length > 8) {
+      if (!confirm(`Open ${ids.length} tabs? Many browsers will rate-limit or block this. Continue?`)) return;
+    }
+    ids.forEach(id => fireTarget(id));
+    selected.clear();
+    updateActionBar();
+  }
+
+  function copyURLs() {
+    if (selected.size === 0) return;
+    const urls = [...selected].map(id => {
+      const t = TARGETS.find(x => x.id === id);
+      try { return t.build(currentEntity.normalised, currentEntity.type); }
+      catch { return null; }
+    }).filter(Boolean).join('\n');
+    if (!urls) {
+      showToast('No URLs to copy', true);
+      return;
+    }
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(urls).then(() => {
+        showToast(`Copied ${selected.size} URLs`);
+        log.push({
+          timestamp: new Date().toISOString(),
+          action: 'copy',
+          target: 'batch',
+          input: rawInput,
+          entity: currentEntity.type,
+          url: `[${selected.size} URLs]`
+        });
+        updateSession();
+      }, () => showToast('Clipboard write failed', true));
+    } else {
+      showToast('Clipboard API not available', true);
+    }
+  }
+
+  function selectFound() {
+    if (!currentEntity) return;
+    selected.clear();
+    for (const t of TARGETS) {
+      if (!t.accepts.includes(currentEntity.type)) continue;
+      const hasWayback = (t.id === 'archive-org' && waybackDetail && waybackDetail.ok && waybackDetail.count > 0);
+      const hasMemento = (t.memento && mementoCounts && mementoCounts[t.memento] && mementoCounts[t.memento].count > 0);
+      if (hasWayback || hasMemento) selected.add(t.id);
+    }
+    renderTargets();
+    updateActionBar();
+    showToast(`Selected ${selected.size} confirmed`);
+  }
+
+  function selectAll() {
+    if (!currentEntity) return;
+    selected.clear();
+    TARGETS.forEach(t => {
+      if (t.accepts.includes(currentEntity.type)) selected.add(t.id);
+    });
+    renderTargets();
+    updateActionBar();
+  }
+
+  function clearInput() {
+    document.getElementById('target-input').value = '';
+    onInputChange();
+    document.getElementById('target-input').focus();
+  }
+
+  function clearSession() {
+    if (log.length === 0) return;
+    if (!confirm('Clear the activity log? The session ID stays the same.')) return;
+    log = [];
+    firedTargets.clear();
+    updateSession();
+    renderTargets();
+  }
+
+  // ---------- EXPORT ----------
+  function exportCSV() {
+    const rows = [
+      ['timestamp', 'action', 'target_id', 'target_name', 'input_raw', 'input_normalised', 'sha256', 'entity_type', 'memento_datetime', 'live_status', 'url']
+    ];
+    log.forEach(e => {
+      const t = TARGETS.find(x => x.id === e.target);
+      rows.push([
+        e.timestamp, e.action, e.target, t ? t.name : e.target,
+        e.input, e.normalised || '', e.sha256 || '', e.entity,
+        e.mementoDatetime || '', e.liveStatus || '', e.url
+      ]);
+    });
+    const csv = rows.map(r => r.map(c => `"${String(c).replace(/"/g, '""')}"`).join(',')).join('\n');
+    download(`${sessionId}.csv`, csv, 'text/csv');
+  }
+
+  function exportMarkdown() {
+    let md = '---\n';
+    md += `session_id: ${sessionId}\n`;
+    md += `tool: SIG-ARC-001\n`;
+    md += `tool_version: v0.1.1\n`;
+    md += `started: ${sessionStart.toISOString()}\n`;
+    md += `target_url_raw: ${rawInput || ''}\n`;
+    md += `target_url_normalised: ${normalisedInput || ''}\n`;
+    md += `target_sha256: ${currentHash || ''}\n`;
+    md += `live_status: ${liveStatus ? liveStatus.label : ''}\n`;
+    md += `pivots_fired: ${log.filter(e => e.action === 'fire').length}\n`;
+    md += `unique_archives: ${new Set(log.filter(e => e.action === 'fire').map(e => e.target)).size}\n`;
+    md += `standard: LST-001 v1.0.3, SIG-STD-002 v2.0\n`;
+    md += '---\n\n';
+    md += `# Archive Trail · ${sessionId}\n\n`;
+    md += `Investigation pivot session for \`${rawInput || '(no target)'}\`.\n\n`;
+    if (normalisedInput && normalisedInput !== rawInput) {
+      md += `Normalised target: \`${normalisedInput}\`\n\n`;
+    }
+    md += `## Activity log\n\n`;
+    md += `| UTC | Action | Archive | Memento-Datetime | URL |\n`;
+    md += `|---|---|---|---|---|\n`;
+    log.forEach(e => {
+      const t = TARGETS.find(x => x.id === e.target);
+      const tgt = t ? t.name : e.target;
+      md += `| ${e.timestamp.slice(11, 19)} | ${e.action} | ${tgt} | ${e.mementoDatetime || '—'} | ${e.url} |\n`;
+    });
+    md += `\n---\n\n_Exported from Signal & Shadow Archive Trail. signalandshadow.io_\n`;
+    download(`${sessionId}.md`, md, 'text/markdown');
+  }
+
+  function download(filename, content, mime) {
+    try {
+      const blob = new Blob([content], { type: mime });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
+      showToast(`Exported ${filename}`);
+    } catch (e) {
+      console.error('Export failed:', e);
+      showToast('Export failed', true);
+    }
+  }
+
+  // ---------- PRINT PREP ----------
+  window.addEventListener('beforeprint', () => {
+    document.getElementById('print-session').textContent = sessionId;
+    document.getElementById('print-started').textContent = sessionStart.toISOString();
+    document.getElementById('print-target-raw').textContent = rawInput || '—';
+    document.getElementById('print-target').textContent = normalisedInput || rawInput || '—';
+    document.getElementById('print-hash').textContent = currentHash || '—';
+    document.getElementById('print-live').textContent = liveStatus ? liveStatus.label : '—';
+    document.getElementById('print-pivots').textContent = log.filter(e => e.action === 'fire').length;
+    if (log.length > 0) {
+      document.getElementById('print-log-table').style.display = 'table';
+      const rows = log.map(e => {
+        const t = TARGETS.find(x => x.id === e.target);
+        const tgt = t ? t.name : e.target;
+        return `<tr><td>${e.timestamp.slice(0, 19).replace('T', ' ')}</td><td>${e.action}</td><td>${escapeHTML(tgt)}</td><td>${escapeHTML(e.mementoDatetime || '—')}</td><td style="word-break: break-all; font-size: 7.5pt;">${escapeHTML(e.url)}</td></tr>`;
+      }).join('');
+      document.getElementById('print-log-rows').innerHTML = rows;
+    }
+  });
+
+  // ---------- INPUT BINDINGS ----------
+  document.getElementById('target-input').addEventListener('input', onInputChange);
+  document.querySelectorAll('.e-hint').forEach(el => {
+    el.addEventListener('click', () => {
+      document.getElementById('target-input').value = el.dataset.hint;
+      onInputChange();
+    });
+  });
+
+  // ---------- KEYBOARD NAVIGATION ----------
+  document.addEventListener('keydown', (e) => {
+    // Skip if typing in input/textarea (except Esc)
+    const inField = e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA';
+
+    // / focuses search (any time)
+    if (e.key === '/' && !inField) {
+      e.preventDefault();
+      document.getElementById('target-input').focus();
+      return;
+    }
+
+    // Esc: clear keyboard focus, blur input
+    if (e.key === 'Escape') {
+      kbFocusIdx = -1;
+      applyKbFocus();
+      if (inField) e.target.blur();
+      return;
+    }
+
+    if (inField) return;
+
+    if (renderedRows.length === 0) return;
+
+    if (e.key === 'ArrowDown' || e.key === 'j') {
+      e.preventDefault();
+      kbFocusIdx = Math.min(kbFocusIdx + 1, renderedRows.length - 1);
+      if (kbFocusIdx === -1) kbFocusIdx = 0;
+      applyKbFocus();
+    } else if (e.key === 'ArrowUp' || e.key === 'k') {
+      e.preventDefault();
+      kbFocusIdx = Math.max(kbFocusIdx - 1, 0);
+      applyKbFocus();
+    } else if (e.key === ' ' && kbFocusIdx >= 0) {
+      e.preventDefault();
+      const id = renderedRows[kbFocusIdx];
+      const cb = document.querySelector(`input[type="checkbox"][data-id="${id}"]`);
+      if (cb && !cb.disabled) {
+        cb.checked = !cb.checked;
+        if (cb.checked) selected.add(id); else selected.delete(id);
+        updateActionBar();
+      }
+    } else if (e.key === 'Enter' && kbFocusIdx >= 0) {
+      e.preventDefault();
+      fireTarget(renderedRows[kbFocusIdx]);
+    }
+  });
+
+  // ---------- TOAST ----------
+  let toastTimer;
+  function showToast(msg, isError) {
+    const t = document.getElementById('toast');
+    t.textContent = msg;
+    t.classList.toggle('error', !!isError);
+    t.classList.add('show');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => t.classList.remove('show'), 2400);
+  }
+
+  // ---------- INIT ----------
+  // Show the file:// warning when running locally (CORS will block all archive requests)
+  if (window.location.protocol === 'file:') {
+    document.getElementById('file-warning').classList.add('show');
+  }
+  updateActionBar();
+  updateSession();
+</script>
+
+</body>
+</html>
