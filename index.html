@@ -1217,7 +1217,7 @@
   <div class="wrap row">
     <span class="sys-id">[ S&S / OPS ]</span>
     <span class="breadcrumb">HUB / TOOLS / ARCHIVE TRAIL</span>
-    <span class="pulse"><span class="dot" aria-hidden="true"></span>SIG-ARC-001 · v0.1.1</span>
+    <span class="pulse"><span class="dot" aria-hidden="true"></span>SIG-ARC-001 · v0.1.2</span>
     <span>VERSOIX</span>
   </div>
 </section>
@@ -1355,7 +1355,7 @@
     <div class="citation-card">
       <div class="citation-label">Citation note</div>
       <div class="citation-body" id="citation-body">
-        <span class="key">tool:</span> <span class="val">SIG-ARC-001 v0.1.1</span><br>
+        <span class="key">tool:</span> <span class="val">SIG-ARC-001 v0.1.2</span><br>
         <span class="key">session:</span> <span class="val" id="cit-session">awaiting</span><br>
         <span class="key">started:</span> <span class="val" id="cit-started">awaiting</span><br>
         <span class="key">target:</span> <span class="val" id="cit-target">—</span><br>
@@ -1380,7 +1380,7 @@
 <!-- Print-only block (only renders for Cmd/Ctrl+P) -->
 <section class="print-only" id="print-block">
   <h2>Archive Trail · Investigation report</h2>
-  <div class="meta-row"><span class="k">Tool</span><span>SIG-ARC-001 v0.1.1</span></div>
+  <div class="meta-row"><span class="k">Tool</span><span>SIG-ARC-001 v0.1.2</span></div>
   <div class="meta-row"><span class="k">Session</span><span id="print-session">—</span></div>
   <div class="meta-row"><span class="k">Started</span><span id="print-started">—</span></div>
   <div class="meta-row"><span class="k">Target URL (raw)</span><span id="print-target-raw">—</span></div>
@@ -1402,7 +1402,7 @@
   <div class="wrap row">
     <span class="accent">[ S&S / OPS ]</span>
     <span class="sep">·</span>
-    <span>SIG-ARC-001 v0.1.1</span>
+    <span>SIG-ARC-001 v0.1.2</span>
     <span class="sep">·</span>
     <span>LST-001 v1.0.3</span>
     <span class="sep">·</span>
@@ -1696,23 +1696,13 @@
     }
   }
 
-  // ---------- LIVE STATUS (HEAD with timeout) ----------
-  // CORS-blocked for most origins. We treat any failure as "Unknown" rather than
-  // false-negative "dead." Honest by default.
+  // ---------- LIVE STATUS ----------
+  // Removed direct HEAD check. Cross-origin HEAD almost always fails CORS, so the
+  // result was always "Unknown" and the failed request cluttered the network log.
+  // Instead we derive live status from Wayback CDX's last-capture status code,
+  // which is more reliable and we already fetch it.
   async function checkLive(url, signal) {
-    const timeoutCtl = new AbortController();
-    const timeoutId = setTimeout(() => timeoutCtl.abort(), 8000);
-    const combined = anySignal([signal, timeoutCtl.signal]);
-    try {
-      const r = await fetch(url, { method: 'HEAD', mode: 'cors', redirect: 'manual', signal: combined });
-      if (r.type === 'opaqueredirect') return { code: 'redirect', ok: false, label: 'Redirect (opaque)' };
-      return { code: r.status, ok: r.ok, label: `${r.status}${r.ok ? ' OK' : ''}`.trim() };
-    } catch (e) {
-      if (e.name === 'AbortError' && signal && signal.aborted) throw e;
-      return { code: null, ok: null, label: 'Unknown (CORS)' };
-    } finally {
-      clearTimeout(timeoutId);
-    }
+    return { code: null, ok: null, label: 'Pending CDX' };
   }
 
   // ---------- MEMENTO FEDERATED ----------
@@ -1778,18 +1768,50 @@
     }
   }
 
-  // ---------- WAYBACK CDX (with paging awareness) ----------
-  // CDX caps at 10,000 rows by default. We request 10,001 to detect overflow,
-  // then report "10,000+" honestly rather than rounding down silently.
+  // ---------- WAYBACK AVAILABILITY (fast pre-check) ----------
+  // Sub-second presence check. Returns { available: bool, closest: { timestamp, status, url } }
+  // We use this to populate "snapshots present" quickly so the user gets feedback
+  // even when the full CDX count is slow.
+  async function checkWaybackAvailability(url, signal) {
+    const timeoutCtl = new AbortController();
+    const timeoutId = setTimeout(() => timeoutCtl.abort(), 6000);
+    const combined = anySignal([signal, timeoutCtl.signal]);
+    try {
+      const api = `https://archive.org/wayback/available?url=${encodeURIComponent(url)}`;
+      const r = await fetch(api, { signal: combined });
+      if (!r.ok) return { ok: false, error: `Availability ${r.status}` };
+      const j = await r.json();
+      const closest = j && j.archived_snapshots && j.archived_snapshots.closest;
+      if (closest && closest.available) {
+        return {
+          ok: true,
+          available: true,
+          timestamp: closest.timestamp || null,
+          status: closest.status || null
+        };
+      }
+      return { ok: true, available: false };
+    } catch (e) {
+      if (e.name === 'AbortError' && signal && signal.aborted) throw e;
+      return { ok: false, error: e.name === 'AbortError' ? 'Timed out' : 'Network error' };
+    } finally {
+      clearTimeout(timeoutId);
+    }
+  }
+
+  // ---------- WAYBACK CDX (with paging awareness, 25s timeout) ----------
+  // CDX caps at 10,000 rows by default. We request 10,001 to detect overflow.
+  // Distinct return shapes for: success, timeout, server error, network error.
+  // The caller can show appropriate UI for each.
   async function checkWaybackCDX(url, signal) {
     const timeoutCtl = new AbortController();
-    const timeoutId = setTimeout(() => timeoutCtl.abort(), 12000);
+    const timeoutId = setTimeout(() => timeoutCtl.abort(), 25000);
     const combined = anySignal([signal, timeoutCtl.signal]);
     const LIMIT = 10001;
     try {
       const cdx = `https://web.archive.org/cdx/search/cdx?url=${encodeURIComponent(url)}&output=json&limit=${LIMIT}&fl=timestamp,statuscode`;
       const r = await fetch(cdx, { signal: combined });
-      if (!r.ok) return { ok: false, error: `CDX returned ${r.status}` };
+      if (!r.ok) return { ok: false, error: `CDX returned ${r.status}`, errorKind: 'server' };
       const j = await r.json();
       if (!Array.isArray(j) || j.length < 2) return { ok: true, count: 0, first: null, last: null, lastStatus: null, capped: false };
       const rows = j.slice(1);
@@ -1808,7 +1830,12 @@
       };
     } catch (e) {
       if (e.name === 'AbortError' && signal && signal.aborted) throw e;
-      return { ok: false, error: e.name === 'AbortError' ? 'Timed out' : 'Network error' };
+      const isTimeout = e.name === 'AbortError';
+      return {
+        ok: false,
+        error: isTimeout ? 'Timed out (25s)' : 'Network error',
+        errorKind: isTimeout ? 'timeout' : 'network'
+      };
     } finally {
       clearTimeout(timeoutId);
     }
@@ -1983,9 +2010,29 @@
       if (waybackDetail === null) {
         return `<div class="discovery-line checking"><span class="marker" aria-hidden="true"><span class="spinner"></span></span><span class="sr-only">Checking. </span>Checking…</div>`;
       }
+      // Hard failure (Availability and CDX both failed)
       if (waybackDetail.ok === false) {
-        return `<div class="discovery-line error"><span class="marker" aria-hidden="true">!</span><span class="sr-only">Error. </span>Check failed</div><div class="discovery-detail">${escapeHTML(waybackDetail.error || 'Retry available')}</div>`;
+        const errKind = waybackDetail.errorKind === 'timeout' ? 'Timed out' : 'Check failed';
+        return `<div class="discovery-line error"><span class="marker" aria-hidden="true">!</span><span class="sr-only">Error. </span>${escapeHTML(errKind)}</div><div class="discovery-detail">${escapeHTML(waybackDetail.error || '')}</div>`;
       }
+      // Confirmed present, count still pending (Availability succeeded, CDX still loading)
+      if (waybackDetail.pending) {
+        const yearBit = waybackDetail.first ? formatYear(waybackDetail.first) + ' or earlier' : '';
+        return `
+          <div class="discovery-line ok"><span class="marker" aria-hidden="true">✓</span><span class="sr-only">Found. </span>Snapshots present</div>
+          <div class="discovery-detail"><span class="spinner"></span> Counting…${yearBit ? ' · ' + yearBit : ''}</div>
+        `;
+      }
+      // Confirmed present, count failed (Availability succeeded, CDX errored or timed out)
+      if (waybackDetail.countFailed) {
+        const yearBit = waybackDetail.first ? formatYear(waybackDetail.first) : '';
+        const failLabel = waybackDetail.countFailed === 'timeout' ? 'count timed out' : 'count unavailable';
+        return `
+          <div class="discovery-line ok"><span class="marker" aria-hidden="true">✓</span><span class="sr-only">Found. </span>Snapshots present</div>
+          <div class="discovery-detail">${yearBit ? yearBit + ' · ' : ''}${failLabel}</div>
+        `;
+      }
+      // Full result
       if (waybackDetail.count > 0) {
         const liveBit = waybackDetail.lastStatus
           ? ` · last capture ${waybackDetail.lastStatus}`
@@ -2046,7 +2093,8 @@
     let n = 0;
     for (const t of TARGETS) {
       if (!t.accepts.includes(currentEntity.type)) continue;
-      if (t.id === 'archive-org' && waybackDetail && waybackDetail.ok && waybackDetail.count > 0) n++;
+      if (t.id === 'archive-org' && waybackDetail && waybackDetail.ok &&
+          (waybackDetail.count > 0 || waybackDetail.pending || waybackDetail.countFailed)) n++;
       else if (t.memento && mementoCounts && mementoCounts[t.memento] && mementoCounts[t.memento].count > 0) n++;
     }
     return n;
@@ -2124,35 +2172,51 @@
   }
 
   function paintDiagnostics() {
-    if (liveStatus) {
-      let cls = 'muted';
-      if (liveStatus.ok === true) cls = 'ok';
-      else if (liveStatus.code === 404 || liveStatus.code === 410) cls = 'err';
-      else if (liveStatus.code === 'redirect' || (liveStatus.code >= 300 && liveStatus.code < 400)) cls = 'warn';
-      setDiag('diag-live', `<span class="check">${escapeHTML(liveStatus.label)}</span>`, cls);
-    }
-
-    // Also surface CDX-derived "last capture status" if HEAD didn't tell us
-    if ((!liveStatus || liveStatus.label === 'Unknown (CORS)') && waybackDetail && waybackDetail.ok && waybackDetail.lastStatus) {
+    // Live status: prefer CDX last-capture status (more reliable than blocked HEAD)
+    if (waybackDetail && waybackDetail.ok && waybackDetail.lastStatus) {
       const code = parseInt(waybackDetail.lastStatus, 10);
       let cls = 'muted', label = `Last Wayback: ${waybackDetail.lastStatus}`;
-      if (code >= 200 && code < 300) cls = 'ok';
-      else if (code === 404 || code === 410) cls = 'err';
-      else if (code >= 300 && code < 400) cls = 'warn';
+      if (code >= 200 && code < 300) { cls = 'ok'; label = `Live (last capture ${waybackDetail.lastStatus})`; }
+      else if (code === 404 || code === 410) { cls = 'err'; label = `Likely dead (Wayback ${waybackDetail.lastStatus})`; }
+      else if (code >= 300 && code < 400) { cls = 'warn'; label = `Redirected (Wayback ${waybackDetail.lastStatus})`; }
       setDiag('diag-live', `<span class="check">${escapeHTML(label)}</span>`, cls);
+    } else if (waybackDetail && waybackDetail.ok === false) {
+      setDiag('diag-live', `<span class="check">Unknown (CDX failed)</span>`, 'muted');
+    } else if (waybackDetail && waybackDetail.pending) {
+      setDiag('diag-live', `<span class="check">Pending CDX…</span>`, 'muted');
     }
 
     if (mementoCounts === null) return; // still checking
+
     const mementoArchives = Object.values(mementoCounts || {}).filter(v => v && v.count > 0).length;
-    const totalCaptures = Object.values(mementoCounts || {}).reduce((s, v) => s + (v.count || 0), 0)
-      + (waybackDetail && waybackDetail.ok ? waybackDetail.count : 0);
-    const totalArchives = mementoArchives + (waybackDetail && waybackDetail.ok && waybackDetail.count > 0 ? 1 : 0);
+    const mementoTotal = Object.values(mementoCounts || {}).reduce((s, v) => s + (v.count || 0), 0);
+
+    let waybackArchiveCount = 0;
+    let waybackCaptureCount = 0;
+    let waybackPendingNote = '';
+
+    if (waybackDetail && waybackDetail.ok) {
+      if (waybackDetail.count > 0) {
+        waybackArchiveCount = 1;
+        waybackCaptureCount = waybackDetail.count;
+      } else if (waybackDetail.pending || waybackDetail.countFailed) {
+        // Snapshots known to exist, but exact count unavailable
+        waybackArchiveCount = 1;
+        waybackPendingNote = waybackDetail.countFailed
+          ? ' (Wayback count unavailable)'
+          : ' (Wayback count pending)';
+      }
+    }
+
+    const totalArchives = mementoArchives + waybackArchiveCount;
+    const totalCaptures = mementoTotal + waybackCaptureCount;
 
     if (totalArchives > 0) {
-      const cappedNote = waybackDetail && waybackDetail.capped ? ' (Wayback capped at 10,000)' : '';
-      setDiag('diag-memento', `<span class="check">${totalArchives} ${totalArchives === 1 ? 'archive' : 'archives'} · ${totalCaptures.toLocaleString()} captures${cappedNote}</span>`, 'ok');
+      const cappedNote = waybackDetail && waybackDetail.capped ? ' (Wayback capped at 10,000)' : waybackPendingNote;
+      const captureLabel = totalCaptures > 0 ? ` · ${totalCaptures.toLocaleString()} captures` : '';
+      setDiag('diag-memento', `<span class="check">${totalArchives} ${totalArchives === 1 ? 'archive' : 'archives'}${captureLabel}${cappedNote}</span>`, 'ok');
     } else if (waybackDetail && waybackDetail.ok === false) {
-      setDiag('diag-memento', `<span class="check">CDX failed</span>`, 'warn');
+      setDiag('diag-memento', `<span class="check">Wayback ${waybackDetail.errorKind === 'timeout' ? 'timed out' : 'failed'}, no other archives</span>`, 'warn');
     } else {
       setDiag('diag-memento', `<span class="check">No snapshots found</span>`, 'warn');
     }
@@ -2243,9 +2307,11 @@
       return;
     }
 
-    // Full URL or domain: run all three checks
+    // Full URL or domain: two-stage Wayback + Memento aggregator in parallel.
+    // Stage 1: Availability API (fast). Paints "Snapshots present" within ~1s.
+    // Stage 2: CDX (slow). Fills exact count and date range. Times out at 25s.
     setDiag('diag-live', '<span class="check"><span class="spinner"></span>Checking…</span>', 'muted');
-    setDiag('diag-memento', '<span class="check"><span class="spinner"></span>Querying aggregator…</span>', 'muted');
+    setDiag('diag-memento', '<span class="check"><span class="spinner"></span>Querying archives…</span>', 'muted');
     mementoCounts = null;
     waybackDetail = null;
     renderTargets();
@@ -2253,15 +2319,36 @@
     verifyAbort = new AbortController();
     const signal = verifyAbort.signal;
 
-    const [liveR, mementoR, waybackR] = await Promise.allSettled([
-      checkLive(entity.normalised, signal),
-      checkMemento(entity.normalised, signal),
-      checkWaybackCDX(entity.normalised, signal)
+    // Fire Availability and Memento in parallel. CDX is fired separately and
+    // can be slow without blocking the user's feedback loop.
+    const fastChecks = Promise.allSettled([
+      checkWaybackAvailability(entity.normalised, signal),
+      checkMemento(entity.normalised, signal)
     ]);
 
+    // Stage 1: paint as soon as fast checks complete
+    const [availR, mementoR] = await fastChecks;
     if (rawInput !== inputAtStart) return;
 
-    liveStatus = liveR.status === 'fulfilled' ? liveR.value : { code: null, label: 'Check failed', ok: null };
+    const avail = availR.status === 'fulfilled' ? availR.value : { ok: false, error: 'Network error' };
+    if (avail.ok && avail.available) {
+      // Provisional waybackDetail: we know snapshots exist, count pending
+      waybackDetail = {
+        ok: true,
+        count: null,           // null = "present, count pending"
+        first: avail.timestamp,
+        last: avail.timestamp,
+        lastStatus: avail.status,
+        capped: false,
+        pending: true
+      };
+    } else if (avail.ok && !avail.available) {
+      // Definitively no Wayback snapshots
+      waybackDetail = { ok: true, count: 0, first: null, last: null, lastStatus: null, capped: false };
+    } else {
+      // Availability failed; try CDX directly as fallback
+      waybackDetail = null;
+    }
 
     if (mementoR.status === 'fulfilled') {
       mementoCounts = mementoR.value.ok ? mementoR.value.counts : {};
@@ -2270,7 +2357,39 @@
       mementoCounts = {};
     }
 
-    waybackDetail = waybackR.status === 'fulfilled' ? waybackR.value : { ok: false, error: 'Network error' };
+    liveStatus = { code: null, ok: null, label: 'Pending CDX' };
+    paintDiagnostics();
+    renderTargets();
+    updateActionBar();
+
+    // Stage 2: CDX in background. Updates Wayback row when it completes (or times out).
+    if (avail.ok && avail.available) {
+      const cdxR = await Promise.allSettled([checkWaybackCDX(entity.normalised, signal)]);
+      if (rawInput !== inputAtStart) return;
+      const cdx = cdxR[0].status === 'fulfilled' ? cdxR[0].value : { ok: false, error: 'Network error', errorKind: 'network' };
+      if (cdx.ok) {
+        waybackDetail = cdx;
+      } else {
+        // Keep the "snapshots present" indicator from stage 1, but mark count as failed
+        waybackDetail = {
+          ok: true,
+          count: null,
+          first: avail.timestamp,
+          last: avail.timestamp,
+          lastStatus: avail.status,
+          capped: false,
+          pending: false,
+          countFailed: cdx.errorKind || 'unknown',
+          countError: cdx.error
+        };
+      }
+    } else if (!avail.ok) {
+      // Availability failed — try CDX as fallback (slower path)
+      const cdxR = await Promise.allSettled([checkWaybackCDX(entity.normalised, signal)]);
+      if (rawInput !== inputAtStart) return;
+      const cdx = cdxR[0].status === 'fulfilled' ? cdxR[0].value : { ok: false, error: 'Network error', errorKind: 'network' };
+      waybackDetail = cdx.ok ? cdx : { ok: false, error: cdx.error, errorKind: cdx.errorKind || 'unknown' };
+    }
 
     cache[cacheKey] = {
       live: liveStatus,
@@ -2372,7 +2491,8 @@
     selected.clear();
     for (const t of TARGETS) {
       if (!t.accepts.includes(currentEntity.type)) continue;
-      const hasWayback = (t.id === 'archive-org' && waybackDetail && waybackDetail.ok && waybackDetail.count > 0);
+      const hasWayback = (t.id === 'archive-org' && waybackDetail && waybackDetail.ok &&
+        (waybackDetail.count > 0 || waybackDetail.pending || waybackDetail.countFailed));
       const hasMemento = (t.memento && mementoCounts && mementoCounts[t.memento] && mementoCounts[t.memento].count > 0);
       if (hasWayback || hasMemento) selected.add(t.id);
     }
@@ -2427,7 +2547,7 @@
     let md = '---\n';
     md += `session_id: ${sessionId}\n`;
     md += `tool: SIG-ARC-001\n`;
-    md += `tool_version: v0.1.1\n`;
+    md += `tool_version: v0.1.2\n`;
     md += `started: ${sessionStart.toISOString()}\n`;
     md += `target_url_raw: ${rawInput || ''}\n`;
     md += `target_url_normalised: ${normalisedInput || ''}\n`;
